@@ -120,12 +120,14 @@ function hideToast(toastElement) {
 }
 
 // Firebase Functions
-async function saveTaskToFirebase(title, status, dueDate) {
+async function saveTaskToFirebase(title, status, dueDate, description = '', priority = 'medium') {
     try {
         await addDoc(collection(db, "tasks"), {
             title: title,
             status: status,
             dueDate: dueDate || "",
+            description: description,
+            priority: priority,
             createdAt: new Date()
         });
     } catch (error) {
@@ -135,26 +137,31 @@ async function saveTaskToFirebase(title, status, dueDate) {
 
 async function loadTasksFromFirebase() {
     try {
-        // Clear existing tasks to prevent duplicates
-        document.getElementById("todo").innerHTML = "";
-        document.getElementById("progress").innerHTML = "";
-        document.getElementById("done").innerHTML = "";
-        
         const querySnapshot = await getDocs(collection(db, "tasks"));
         
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
-            // create task element (use your existing function)
-            const task = createTaskElement(data.title);
+            // Create task object compatible with your existing system
+            const task = {
+                id: doc.id,
+                title: data.title,
+                status: data.status,
+                dueDate: data.dueDate || null,
+                createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
+                description: data.description || '',
+                priority: data.priority || 'medium',
+                pinned: false,
+                subtasks: [],
+                files: []
+            };
 
-            // put task in correct column
-            const column = document.getElementById(data.status);
-            if (column) {
-                column.appendChild(task);
-            }
+            // Add to state instead of directly manipulating DOM
+            state.tasks.push(task);
         });
 
+        // Render board after loading all tasks
+        renderBoard();
         console.log("Tasks loaded from Firebase");
     } catch (error) {
         console.error("Firebase load error:", error);
@@ -185,8 +192,8 @@ function init() {
         // Initialize theme manager first
         ThemeManager.init();
 
-        // Then load application state
-        loadState();
+        // Clear local state to load fresh from Firebase
+        state.tasks = [];
 
         // Initialize the rest of the application
         renderBoard();
@@ -197,6 +204,9 @@ function init() {
 
         // Show welcome message
         showToast('Welcome to YoursKanban!', 'success');
+
+        // Load tasks from Firebase after initialization
+        loadTasksFromFirebase();
     } catch (error) {
         console.error('Initialization error:', error);
         showToast('Failed to initialize the application', 'error');
@@ -1048,7 +1058,7 @@ function handleFormSubmit(e) {
         showToast('Task created', 'success');
         
         // Save to Firebase
-        saveTaskToFirebase(title, status, dueDate);
+        saveTaskToFirebase(title, status, dueDate, description, priority);
     }
 
     saveState();
@@ -1428,7 +1438,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
-    // Load tasks from Firebase
-    loadTasksFromFirebase();
 });
