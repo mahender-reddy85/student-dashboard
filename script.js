@@ -137,12 +137,15 @@ async function saveTaskToFirebase(title, status, dueDate, description = '', prio
 
 async function loadTasksFromFirebase() {
     try {
-        const querySnapshot = await getDocs(collection(db, "tasks"));
+        // Clear local state first to prevent duplicates
+        state.tasks = [];
         
+        const querySnapshot = await getDocs(collection(db, "tasks"));
+
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
-            // Create task object compatible with your existing system
+            // Create task object compatible with your system
             const task = {
                 id: doc.id,
                 title: data.title,
@@ -156,11 +159,11 @@ async function loadTasksFromFirebase() {
                 files: []
             };
 
-            // Add to state instead of directly manipulating DOM
+            // Add to state
             state.tasks.push(task);
         });
 
-        // Render board after loading all tasks
+        // Render board with loaded tasks
         renderBoard();
         console.log("Tasks loaded from Firebase");
     } catch (error) {
@@ -213,49 +216,36 @@ function init() {
     }
 }
 
-// Saves the current application state to localStorage
+// Saves the current application state to localStorage (DISABLED - Using Firebase instead)
 function saveState() {
     try {
-        const stateToSave = {
-            tasks: state.tasks,
-            lastDeletedTask: state.lastDeletedTask
-        };
-        localStorage.setItem('kanbanflow_state', JSON.stringify(stateToSave));
+        // DISABLED: Using Firebase for persistence now
+        // const stateToSave = {
+        //     tasks: state.tasks,
+        //     lastDeletedTask: state.lastDeletedTask
+        // };
+        // localStorage.setItem('kanbanflow_state', JSON.stringify(stateToSave));
+        console.log('State save skipped - using Firebase');
     } catch (error) {
         console.error('Failed to save state:', error);
         showToast('Failed to save board state', 'error');
     }
 }
 
-// Loads the application state from localStorage
+// Loads the application state from localStorage (DISABLED - Using Firebase instead)
 function loadState() {
     try {
-        const savedState = localStorage.getItem('kanbanflow_state');
-        if (savedState) {
-            const parsedState = JSON.parse(savedState);
-
-            // Validate and set state with fallbacks
-            state.tasks = Array.isArray(parsedState.tasks) ? parsedState.tasks : [];
-            state.lastDeletedTask = parsedState.lastDeletedTask || null;
-
-            // Clean up any invalid tasks and ensure they have required fields
-            state.tasks = state.tasks.map(task => ({
-                ...task,
-                files: Array.isArray(task.files) ? task.files : []
-            })).filter(task => 
-                task &&
-                typeof task.id === 'string' &&
-                ['todo', 'in-progress', 'done'].includes(task.status)
-            );
-
-            // Theme is now handled by ThemeManager
-        }
+        // DISABLED: Using Firebase for persistence now
+        // const savedState = localStorage.getItem('kanbanflow_state');
+        // if (savedState) {
+        //     const parsedState = JSON.parse(savedState);
+        //     state.tasks = parsedState.tasks || [];
+        //     state.lastDeletedTask = parsedState.lastDeletedTask || null;
+        // }
+        console.log('State load skipped - using Firebase');
     } catch (error) {
         console.error('Failed to load state:', error);
-        // Reset to default state on error
-        state.tasks = [];
-        state.lastDeletedTask = null;
-        // Theme will default to system preference via ThemeManager
+        showToast('Failed to load board state', 'error');
     }
 }
 
@@ -740,7 +730,7 @@ function updateTaskStatus(id, status) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
         task.status = status;
-        saveState();
+        // saveState(); // DISABLED - Using Firebase
         renderBoard();
     }
 }
@@ -775,7 +765,7 @@ function handleFileDrop(e) {
                     url: file.type.startsWith('image/') ? URL.createObjectURL(file) : '#'
                 });
             });
-            saveState();
+            // saveState(); // DISABLED - Using Firebase
             renderBoard();
         } else {
             // If no task is being edited, create a new task with the files
@@ -796,7 +786,7 @@ function handleFileDrop(e) {
             };
 
             state.tasks.push(newTask);
-            saveState();
+            // saveState(); // DISABLED - Using Firebase
             renderBoard();
         }
     }
@@ -921,7 +911,7 @@ function setupEventListeners() {
 
         // Clear the board
         state.tasks = [];
-        saveState();
+        // saveState(); // DISABLED - Using Firebase
         renderBoard();
         hideClearBoardConfirmation();
 
@@ -933,7 +923,7 @@ function setupEventListeners() {
             () => {
                 // Undo clear action
                 state.tasks = previousTasks;
-                saveState();
+                // saveState(); // DISABLED - Using Firebase
                 renderBoard();
                 showToast('Board restored', 'success');
             }
@@ -1061,7 +1051,7 @@ function handleFormSubmit(e) {
         saveTaskToFirebase(title, status, dueDate, description, priority);
     }
 
-    saveState();
+    // saveState(); // DISABLED - Using Firebase
     renderBoard();
     closeModal();
 }
@@ -1102,7 +1092,7 @@ function setupInlineEditing(card, task) {
         if (newTitle && newTitle !== task.title) {
             task.title = newTitle;
             titleText.textContent = newTitle || '/';
-            saveState();
+            // saveState(); // DISABLED - Using Firebase
             showToast('Task updated', 'success');
         }
 
@@ -1203,7 +1193,7 @@ function togglePin(id) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
         task.pinned = !task.pinned;
-        saveState();
+        // saveState(); // DISABLED - Using Firebase
         renderBoard();
         showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
     }
@@ -1228,7 +1218,7 @@ function duplicateTask(id) {
 
     // Add the new task to the beginning of the tasks array
     state.tasks.unshift(newTask);
-    saveState();
+    // saveState(); // DISABLED - Using Firebase
     renderBoard();
 
     // Show success toast
@@ -1244,7 +1234,7 @@ function deleteTask(id) {
 
     // Remove the task
     state.tasks = state.tasks.filter(task => task.id !== id);
-    saveState();
+    // saveState(); // DISABLED - Using Firebase
     renderBoard();
     hideDeleteConfirmation();
 
@@ -1259,7 +1249,7 @@ function deleteTask(id) {
                 // Remove the deletedAt property before adding back
                 const { deletedAt, ...task } = state.lastDeletedTask;
                 state.tasks.push(task);
-                saveState();
+                // saveState(); // DISABLED - Using Firebase
                 renderBoard();
                 showToast('Task restored', 'success');
                 state.lastDeletedTask = null;
