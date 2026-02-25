@@ -135,13 +135,27 @@ async function saveTaskToFirebase(title, status, dueDate) {
 
 async function loadTasksFromFirebase() {
     try {
+        // Clear existing tasks to prevent duplicates
+        document.getElementById("todo").innerHTML = "";
+        document.getElementById("progress").innerHTML = "";
+        document.getElementById("done").innerHTML = "";
+        
         const querySnapshot = await getDocs(collection(db, "tasks"));
+        
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
+            // create task element (use your existing function)
             const task = createTaskElement(data.title);
-            document.getElementById(data.status).appendChild(task);
+
+            // put task in correct column
+            const column = document.getElementById(data.status);
+            if (column) {
+                column.appendChild(task);
+            }
         });
+
+        console.log("Tasks loaded from Firebase");
     } catch (error) {
         console.error("Firebase load error:", error);
     }
