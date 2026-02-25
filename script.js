@@ -135,6 +135,24 @@ async function saveTaskToFirebase(title, status, dueDate, description = '', prio
     }
 }
 
+async function updateTaskInFirebase(taskId, taskData) {
+    try {
+        const taskRef = doc(db, "tasks", taskId);
+        await updateDoc(taskRef, taskData);
+    } catch (error) {
+        console.error("Firebase update error:", error);
+    }
+}
+
+async function deleteTaskFromFirebase(taskId) {
+    try {
+        const taskRef = doc(db, "tasks", taskId);
+        await deleteDoc(taskRef);
+    } catch (error) {
+        console.error("Firebase delete error:", error);
+    }
+}
+
 async function loadTasksFromFirebase() {
     try {
         // Clear local state first to prevent duplicates
@@ -730,7 +748,8 @@ function updateTaskStatus(id, status) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
         task.status = status;
-        // saveState(); // DISABLED - Using Firebase
+        // Update in Firebase
+        updateTaskInFirebase(id, { status: status });
         renderBoard();
     }
 }
@@ -1092,7 +1111,8 @@ function setupInlineEditing(card, task) {
         if (newTitle && newTitle !== task.title) {
             task.title = newTitle;
             titleText.textContent = newTitle || '/';
-            // saveState(); // DISABLED - Using Firebase
+            // Update in Firebase
+            updateTaskInFirebase(task.id, { title: newTitle });
             showToast('Task updated', 'success');
         }
 
@@ -1193,7 +1213,8 @@ function togglePin(id) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
         task.pinned = !task.pinned;
-        // saveState(); // DISABLED - Using Firebase
+        // Update in Firebase
+        updateTaskInFirebase(id, { pinned: task.pinned });
         renderBoard();
         showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
     }
@@ -1203,7 +1224,7 @@ function duplicateTask(id) {
     const taskToDuplicate = state.tasks.find(task => task.id === id);
     if (!taskToDuplicate) return;
 
-    // Create a deep copy of the task
+    // Create a deep copy of task
     const newTask = JSON.parse(JSON.stringify(taskToDuplicate));
 
     // Generate a new ID and update timestamps
@@ -1211,14 +1232,17 @@ function duplicateTask(id) {
     newTask.createdAt = Date.now();
     newTask.updatedAt = Date.now();
 
-    // Add " (Copy)" to the title if it doesn't already have it
+    // Add " (Copy)" to title if it doesn't already have it
     if (!newTask.title.includes(' (Copy)')) {
         newTask.title = `${newTask.title} (Copy)`;
     }
 
-    // Add the new task to the beginning of the tasks array
+    // Add new task to beginning of tasks array
     state.tasks.unshift(newTask);
-    // saveState(); // DISABLED - Using Firebase
+    
+    // Save to Firebase
+    saveTaskToFirebase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority);
+    
     renderBoard();
 
     // Show success toast
@@ -1229,12 +1253,14 @@ function deleteTask(id) {
     const taskToDelete = state.tasks.find(task => task.id === id);
     if (!taskToDelete) return;
 
-    // Store the deleted task for potential undo
     state.lastDeletedTask = { ...taskToDelete, deletedAt: Date.now() };
 
-    // Remove the task
+    // Remove task from local state
     state.tasks = state.tasks.filter(task => task.id !== id);
-    // saveState(); // DISABLED - Using Firebase
+    
+    // Delete from Firebase
+    deleteTaskFromFirebase(id);
+    
     renderBoard();
     hideDeleteConfirmation();
 
