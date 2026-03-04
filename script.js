@@ -12,6 +12,9 @@
 let currentUserId = window.currentUserId || null;
 let db = window.db || null;
 
+// Flag to prevent reloading during clear/undo operations
+let isClearingOrUndoing = false;
+
 // Function to update global variables when Firebase auth is ready
 function updateGlobalVariables() {
     if (window.currentUserId !== undefined) {
@@ -273,6 +276,11 @@ async function loadTasksFromDatabase() {
     try {
         // Update global variables first
         updateGlobalVariables();
+        
+        // Skip loading if we're in the middle of clear/undo operations
+        if (isClearingOrUndoing) {
+            return;
+        }
         
         // Wait a bit for Firebase auth to complete
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
@@ -1088,6 +1096,9 @@ function setupEventListeners() {
     }
 
     async function clearBoard() {
+        // Set flag to prevent reloading during clear operation
+        isClearingOrUndoing = true;
+        
         // Store current tasks for potential undo
         const previousTasks = [...state.tasks];
 
@@ -1112,6 +1123,9 @@ function setupEventListeners() {
             'error',
             5000,
             async () => {
+                // Set flag to prevent reloading during undo operation
+                isClearingOrUndoing = true;
+                
                 // Undo clear action
                 state.tasks = previousTasks;
                 
@@ -1122,6 +1136,11 @@ function setupEventListeners() {
                 
                 renderBoard();
                 showToast('Board restored', 'success');
+                
+                // Clear flag after a short delay to allow undo to complete
+                setTimeout(() => {
+                    isClearingOrUndoing = false;
+                }, 500);
             }
         );
     }
