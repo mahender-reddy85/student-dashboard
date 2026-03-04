@@ -1807,6 +1807,16 @@ text-align: center;
 .nav-actions {
 width: 100%;
 justify-content: space-between;
+align-items: center;
+flex-wrap: wrap;
+}
+
+.user-profile {
+order: 1;
+}
+
+.theme-toggle {
+order: 2;
 }
 
 .search-container {
