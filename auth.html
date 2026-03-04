@@ -71,6 +71,8 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
+      width: 280px;
+      max-width: 90%;
     }
 
     button.skip-btn:hover {
@@ -117,8 +119,13 @@
       margin: 10px 0;
       cursor: pointer;
       transition: all 0.2s ease;
-      width: 100%;
-      max-width: 280px;
+      width: 280px;
+      max-width: 90%;
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
     }
 
     .google-btn:hover {
@@ -453,11 +460,18 @@
         transform: none !important;
         margin: 20px auto !important;
         display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
       }
 
       .google-btn {
+        position: relative !important;
+        bottom: auto !important;
+        left: auto !important;
+        transform: none !important;
         max-width: 100% !important;
         margin: 15px auto !important;
+        width: 100% !important;
       }
     }
   </style>
