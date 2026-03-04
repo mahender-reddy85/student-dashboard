@@ -586,45 +586,43 @@ function applyTheme() {
 }
 
 // --- UI Rendering ---
-function sortTasksByDueDate(tasks, order) {
-    if (order === 'none') return [...tasks];
+function compareTasksByDueDate(a, b, order) {
+    if (order === 'none') return 0;
 
-    return [...tasks].sort((a, b) => {
-        // Handle Firestore Timestamp objects and regular dates
-        const getDateValue = (date) => {
-            if (!date) return new Date(0);
-            
-            // If it's a Firestore Timestamp (has toDate method)
-            if (date && typeof date.toDate === 'function') {
-                return date.toDate();
-            }
-            
-            // If it's a number (milliseconds)
-            if (typeof date === 'number') {
-                return new Date(date);
-            }
-            
-            // If it's a string date
-            if (typeof date === 'string') {
-                return new Date(date);
-            }
-            
-            // Default: treat as date object
+    // Handle Firestore Timestamp objects and regular dates
+    const getDateValue = (date) => {
+        if (!date) return new Date(0);
+        
+        // If it's a Firestore Timestamp (has toDate method)
+        if (date && typeof date.toDate === 'function') {
+            return date.toDate();
+        }
+        
+        // If it's a number (milliseconds)
+        if (typeof date === 'number') {
             return new Date(date);
-        };
+        }
+        
+        // If it's a string date
+        if (typeof date === 'string') {
+            return new Date(date);
+        }
+        
+        // Default: treat as date object
+        return new Date(date);
+    };
 
-        const dateA = getDateValue(a.dueDate);
-        const dateB = getDateValue(b.dueDate);
+    const dateA = getDateValue(a.dueDate);
+    const dateB = getDateValue(b.dueDate);
 
-        // If both tasks don't have due dates, maintain their order
-        if (!a.dueDate && !b.dueDate) return 0;
-        // Tasks without due dates go to the end when sorting in ascending order, or to the start when descending
-        if (!a.dueDate) return order === 'asc' ? 1 : -1;
-        if (!b.dueDate) return order === 'asc' ? -1 : 1;
+    // If both tasks don't have due dates, maintain their order
+    if (!a.dueDate && !b.dueDate) return 0;
+    // Tasks without due dates go to the end when sorting in ascending order, or to the start when descending
+    if (!a.dueDate) return order === 'asc' ? 1 : -1;
+    if (!b.dueDate) return order === 'asc' ? -1 : 1;
 
-        // Sort by date
-        return order === 'asc' ? dateA - dateB : dateB - dateA;
-    });
+    // Sort by date
+    return order === 'asc' ? dateA - dateB : dateB - dateA;
 }
 
 function toggleSortOrder() {
@@ -671,7 +669,7 @@ function renderBoard() {
 
             // If sort order is enabled, sort by due date
             if (state.sortOrder !== 'none') {
-                return sortTasksByDueDate([a, b], state.sortOrder);
+                return compareTasksByDueDate(a, b, state.sortOrder);
             }
 
             return 0;
