@@ -288,7 +288,8 @@
             deleteDoc,
             updateDoc,
             getDoc,
-            setDoc
+            setDoc,
+            serverTimestamp
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -317,6 +318,7 @@
         window.updateDoc = updateDoc;
         window.getDoc = getDoc;
         window.setDoc = setDoc;
+        window.serverTimestamp = serverTimestamp;
         window.getStorage = getStorage;
         window.ref = ref;
         window.uploadBytes = uploadBytes;

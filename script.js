@@ -130,8 +130,11 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             dueDate: dueDate || "",
             description: description,
             priority: priority,
+            pinned: false,
+            userId: currentUserId,
             subtasks: subtasks,
-            createdAt: new Date()
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
         });
     } catch (error) {
         console.error("Database save error:", error);
@@ -151,14 +154,15 @@ async function updateTaskInDatabase(taskId, taskData) {
                 ...taskData,
                 id: taskId,
                 userId: currentUserId,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
+                pinned: taskData.pinned || false,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
             });
         } else {
             // Document exists, update it
             await updateDoc(taskRef, {
                 ...taskData,
-                updatedAt: Date.now()
+                updatedAt: serverTimestamp()
             });
         }
     } catch (error) {
@@ -682,18 +686,6 @@ function createTaskCard(task) {
             </div>
         </div>` : ''}
         
-        ${task.files && task.files.length > 0 ? `
-        <div class="file-preview">
-            ${task.files.map(file => `
-                <div class="file-item">
-                    <i class="fas ${getFileIcon(file.name)} file-icon"></i>
-                    <span>${file.name}</span>
-                    <a href="${file.url || '#'}" target="_blank" class="file-link">
-                        <i class="fas fa-external-link-alt file-icon"></i>
-                    </a>
-                </div>
-            `).join('')}
-        </div>` : ''}
         <div class="card-footer">
             <span class="priority-badge priority-${task.priority || 'medium'}">
                 ${(task.priority || 'medium').toUpperCase()}
@@ -1083,7 +1075,6 @@ function handleFormSubmit(e) {
         dueDate: dueDate ? new Date(dueDate).getTime() : null,
         pinned: existingTask?.pinned || false,
         subtasks: currentSubtasks.length > 0 ? currentSubtasks : (existingTask?.subtasks || []),
-        files: existingTask?.files || [],
         updatedAt: Date.now()
     };
 
@@ -1262,15 +1253,18 @@ function duplicateTask(id) {
     // Create a deep copy of task
     const newTask = JSON.parse(JSON.stringify(taskToDuplicate));
 
-    // Generate a new ID and update timestamps
+    // Generate a new ID and reset timestamps
     newTask.id = Date.now().toString();
-    newTask.createdAt = Date.now();
-    newTask.updatedAt = Date.now();
+    delete newTask.createdAt;
+    delete newTask.updatedAt;
 
     // Add "(Copy)" to title if it doesn't already have it
     if (!newTask.title.includes(' (Copy)')) {
         newTask.title = `${newTask.title} (Copy)`;
     }
+
+    // Remove files array if it exists
+    delete newTask.files;
 
     // Add new task to beginning of tasks array
     state.tasks.unshift(newTask);
