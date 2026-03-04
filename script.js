@@ -797,7 +797,7 @@ function updateTaskStatus(id, status) {
     if (task) {
         task.status = status;
         // Update in database
-        updateTaskInDatabase(id, { status: status });
+        updateTaskInDatabase(id, { status: status, userId: currentUserId });
         renderBoard();
     }
 }
@@ -1075,6 +1075,7 @@ function handleFormSubmit(e) {
         dueDate: dueDate ? new Date(dueDate).getTime() : null,
         pinned: existingTask?.pinned || false,
         subtasks: currentSubtasks.length > 0 ? currentSubtasks : (existingTask?.subtasks || []),
+        userId: currentUserId,
         updatedAt: Date.now()
     };
 
@@ -1136,7 +1137,7 @@ function setupInlineEditing(card, task) {
             task.title = newTitle;
             titleText.textContent = newTitle || '/';
             // Update in database
-            updateTaskInDatabase(task.id, { title: newTitle });
+            updateTaskInDatabase(task.id, { title: newTitle, userId: currentUserId });
             showToast('Task updated', 'success');
         }
 
@@ -1181,6 +1182,55 @@ function createSubtaskElement(subtask, index) {
             <i class="fas fa-times"></i>
         </button>
     `;
+
+    // Add event listener for checkbox changes
+    const checkbox = subtaskEl.querySelector('input[type="checkbox"]');
+    const deleteBtn = subtaskEl.querySelector('.delete-subtask');
+    
+    if (checkbox) {
+        checkbox.addEventListener('change', async (e) => {
+            const taskId = document.getElementById('taskId')?.value;
+            if (taskId) {
+                const task = state.tasks.find(t => t.id === taskId);
+                if (task && task.subtasks) {
+                    task.subtasks[index].completed = e.target.checked;
+                    // Update in database with new subtasks array
+                    updateTaskInDatabase(taskId, { 
+                        subtasks: task.subtasks,
+                        userId: currentUserId 
+                    });
+                    showToast(e.target.checked ? 'Subtask completed' : 'Subtask unchecked', 'success');
+                }
+            }
+        });
+    }
+
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async () => {
+            const taskId = document.getElementById('taskId')?.value;
+            if (taskId) {
+                const task = state.tasks.find(t => t.id === taskId);
+                if (task && task.subtasks) {
+                    task.subtasks.splice(index, 1);
+                    // Update in database with new subtasks array
+                    updateTaskInDatabase(taskId, { 
+                        subtasks: task.subtasks,
+                        userId: currentUserId 
+                    });
+                    // Re-render subtasks in modal
+                    const subtasksContainer = document.getElementById('subtasksContainer');
+                    subtasksContainer.innerHTML = '';
+                    task.subtasks.forEach((subtask, i) => {
+                        const subtaskEl = createSubtaskElement(subtask, i);
+                        if (subtaskEl) {
+                            subtasksContainer.appendChild(subtaskEl);
+                        }
+                    });
+                    showToast('Subtask deleted', 'success');
+                }
+            }
+        });
+    }
 
     return subtaskEl;
 }
@@ -1240,7 +1290,7 @@ function togglePin(id) {
     if (task) {
         task.pinned = !task.pinned;
         // Update in database
-        updateTaskInDatabase(id, { pinned: task.pinned });
+        updateTaskInDatabase(id, { pinned: task.pinned, userId: currentUserId });
         renderBoard();
         showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
     }
