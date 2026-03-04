@@ -12,6 +12,19 @@
 let currentUserId = window.currentUserId || null;
 let db = window.db || null;
 
+// Function to update global variables when Firebase auth is ready
+function updateGlobalVariables() {
+    if (window.currentUserId !== undefined) {
+        currentUserId = window.currentUserId;
+    }
+    if (window.db !== undefined) {
+        db = window.db;
+    }
+}
+
+// Check for updates periodically
+setInterval(updateGlobalVariables, 100);
+
 const state = {
     tasks: [],
     theme: (() => {
@@ -258,19 +271,23 @@ async function deleteTaskFromDatabase(taskId) {
 
 async function loadTasksFromDatabase() {
     try {
+        // Update global variables first
+        updateGlobalVariables();
+        
+        // Wait a bit for Firebase auth to complete
+        if (!currentUserId || currentUserId === null || currentUserId === undefined) {
+            console.warn('currentUserId not yet available, retrying in 100ms...');
+            setTimeout(loadTasksFromDatabase, 100);
+            return;
+        }
+        
+        console.log('Loading tasks for currentUserId:', currentUserId);
+        
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
             // Use localStorage for skip auth users
             const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             state.tasks = tasks;
-            renderBoard();
-            return;
-        }
-        
-        // Check if currentUserId is valid before accessing Firestore
-        if (!currentUserId || currentUserId === null || currentUserId === undefined) {
-            console.warn('No valid currentUserId found, skipping database load');
-            state.tasks = [];
             renderBoard();
             return;
         }
