@@ -51,7 +51,8 @@ buildathon/
 ├── index.html          # Main application file
 ├── styles.css           # Complete CSS styling
 ├── firebase-config.js   # Firebase configuration
-├── firebase.js           # Firebase integration and task management
+├── script.js            # Main application logic
+├── auth.html            # Authentication page
 ├── README.md            # Documentation
 └── favicon.jpg         # Application icon
 ```

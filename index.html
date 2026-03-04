@@ -292,13 +292,11 @@
             localStorage.removeItem('skipAuth');
             window.currentUserId = 'skip-auth-user';
             updateUserProfile('Skip Auth User');
-            updateUserBanner('Skip Auth User');
             loadTasks();
           } else if (user) {
             window.currentUserId = user.uid;
             const userEmail = user.email || 'Anonymous User';
             updateUserProfile(userEmail);
-            updateUserBanner(userEmail);
             loadTasks();
             
             // Auto-redirect check - if coming from auth page, show success message
@@ -332,14 +330,6 @@
           }
           if (userAvatarTextLarge) {
             userAvatarTextLarge.textContent = firstLetter;
-          }
-        }
-
-        // Update user banner display
-        function updateUserBanner(email) {
-          const userEmailDisplayElement = document.getElementById('user-email-display');
-          if (userEmailDisplayElement) {
-            userEmailDisplayElement.textContent = email;
           }
         }
 
