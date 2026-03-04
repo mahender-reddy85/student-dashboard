@@ -71,9 +71,9 @@ function showToast(message, type = 'info', duration = 5000, undoAction = null) {
     if (undoAction) {
         const undoBtn = document.getElementById(`${toastId}-undo`);
         if (undoBtn) {
-            undoBtn.onclick = (e) => {
+            undoBtn.onclick = async (e) => {
                 e.stopPropagation();
-                undoAction();
+                await undoAction();
                 hideToast(toast);
             };
         }
@@ -1415,16 +1415,38 @@ function deleteTask(id) {
         'Task deleted',
         'error',
         5000,
-        () => {
+        async () => {
             // Undo delete action
             if (state.lastDeletedTask) {
                 // Remove the deletedAt property before adding back
                 const { deletedAt, ...task } = state.lastDeletedTask;
-                state.tasks.push(task);
-                // saveState(); // DISABLED - Using database
-                renderBoard();
-                showToast('Task restored', 'success');
-                state.lastDeletedTask = null;
+                
+                try {
+                    // Restore to database first
+                    const docRef = await saveTaskToDatabase(
+                        task.title,
+                        task.status, 
+                        task.dueDate,
+                        task.description,
+                        task.priority,
+                        task.subtasks || []
+                    );
+                    
+                    if (docRef) {
+                        // Update local task with the correct Firestore ID
+                        task.id = docRef.id;
+                        task.createdAt = Date.now(); // Temporary until next refresh
+                        state.tasks.push(task);
+                        renderBoard();
+                        showToast('Task restored', 'success');
+                        state.lastDeletedTask = null;
+                    } else {
+                        showToast('Failed to restore task', 'error');
+                    }
+                } catch (error) {
+                    console.error('Undo restore error:', error);
+                    showToast('Failed to restore task', 'error');
+                }
             }
         }
     );
