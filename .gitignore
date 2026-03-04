@@ -1,6 +1,5 @@
 # Firebase credentials - NEVER commit these
 serviceAccountKey.json
-firebase-config.js
 .env
 
 # Environment variables
