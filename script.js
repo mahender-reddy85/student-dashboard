@@ -150,6 +150,12 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             return { id: newTask.id };
         }
         
+        // Check if currentUserId is valid before accessing Firestore
+        if (!currentUserId || currentUserId === null || currentUserId === undefined) {
+            console.warn('No valid currentUserId found, cannot save to database');
+            return null;
+        }
+        
         // Convert dueDate to Firestore Timestamp if provided
         const dueDateTimestamp = dueDate ? new Date(dueDate) : null;
         
@@ -192,6 +198,12 @@ async function updateTaskInDatabase(taskId, taskData) {
             return;
         }
         
+        // Check if currentUserId is valid before accessing Firestore
+        if (!currentUserId || currentUserId === null || currentUserId === undefined) {
+            console.warn('No valid currentUserId found, cannot update database');
+            return;
+        }
+        
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         
         // First check if document exists
@@ -231,6 +243,12 @@ async function deleteTaskFromDatabase(taskId) {
             return;
         }
         
+        // Check if currentUserId is valid before accessing Firestore
+        if (!currentUserId || currentUserId === null || currentUserId === undefined) {
+            console.warn('No valid currentUserId found, cannot delete from database');
+            return;
+        }
+        
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
     } catch (error) {
@@ -245,6 +263,14 @@ async function loadTasksFromDatabase() {
             // Use localStorage for skip auth users
             const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             state.tasks = tasks;
+            renderBoard();
+            return;
+        }
+        
+        // Check if currentUserId is valid before accessing Firestore
+        if (!currentUserId || currentUserId === null || currentUserId === undefined) {
+            console.warn('No valid currentUserId found, skipping database load');
+            state.tasks = [];
             renderBoard();
             return;
         }
@@ -978,9 +1004,6 @@ function setupEventListeners() {
     // Sort button
     document.getElementById('sortByDate')?.addEventListener('click', toggleSortOrder);
 
-    // Export button
-    document.getElementById('exportBoard')?.addEventListener('click', exportBoard);
-
     // Add/Edit Task delegators
     DOM.board.addEventListener('click', async (e) => {
         const addBtn = e.target.closest('.add-task-btn');
@@ -1531,62 +1554,6 @@ function deleteTask(id) {
             }
         }
     );
-}
-
-// Export Function
-function exportBoard() {
-    const data = {
-        version: '1.0',
-        tasks: state.tasks,
-        theme: state.theme,
-        exportedAt: new Date().toISOString()
-    };
-
-    const dataStr = JSON.stringify(data, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
-    const exportName = `yourskanban-${new Date().toISOString().split('T')[0]}.json`;
-
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportName);
-    linkElement.click();
-
-    showNotification('Board exported successfully!', 'success');
-}
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-
-    // Add icon based on type
-    let icon = 'info-circle';
-    if (type === 'success') icon = 'check-circle';
-    if (type === 'error') icon = 'exclamation-circle';
-    if (type === 'warning') icon = 'exclamation-triangle';
-
-    notification.innerHTML = `
-        <i class="fas fa-${icon}"></i>
-        <span>${message}</span>
-    `;
-
-    document.body.appendChild(notification);
-
-    // Add show class after a small delay to trigger the animation
-    if (notification) {
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 10);
-    }
-
-    // Remove notification after 3 seconds
-    const duration = type === 'error' ? 5000 : 3000; // Show errors longer
-    setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => {
-            notification.remove();
-        }, 300);
-    }, duration);
 }
 
 // --- Utility Functions ---
