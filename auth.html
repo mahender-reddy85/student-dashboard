@@ -401,8 +401,8 @@
         <input type="email" id="login-email" placeholder="Email" />
         <input type="password" id="login-password" placeholder="Password" />
         <button type="button" onclick="login()">Sign In</button>
-        <button type="button" class="skip-btn" id="skipAuth">Skip Auth</button>
       </form>
+      <button type="button" class="skip-btn" id="skipAuth">Skip Auth</button>
     </div>
     <div class="overlay-container">
       <div class="overlay">
@@ -477,6 +477,8 @@
     });
 
     skipAuthButton.addEventListener('click', () => {
+      // Set a flag to skip authentication check
+      localStorage.setItem('skipAuth', 'true');
       // Redirect to the main dashboard
       window.location.href = 'index.html';
     });
