@@ -124,7 +124,7 @@ function hideToast(toastElement) {
 // Database Functions
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = []) {
     try {
-        await addDoc(collection(db, "users", currentUserId, "tasks"), {
+        const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             status: status,
             dueDate: dueDate || "",
@@ -136,8 +136,12 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
+        
+        // Return the document reference with the generated ID
+        return docRef;
     } catch (error) {
         console.error("Database save error:", error);
+        return null;
     }
 }
 
@@ -190,18 +194,19 @@ async function loadTasksFromDatabase() {
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
-            // Create task object compatible with your system
+            // Create task object with all fields from database
             const task = {
-                id: doc.id,
+                id: doc.id, // Use actual Firestore document ID
                 title: data.title,
                 status: data.status,
                 dueDate: data.dueDate || null,
                 createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
+                updatedAt: data.updatedAt ? new Date(data.updatedAt).getTime() : Date.now(),
                 description: data.description || '',
                 priority: data.priority || 'medium',
-                pinned: false,
-                subtasks: [],
-                files: []
+                pinned: data.pinned || false,
+                userId: data.userId || currentUserId,
+                subtasks: data.subtasks || []
             };
 
             // Add to state
@@ -877,7 +882,7 @@ function setupEventListeners() {
     document.getElementById('exportBoard')?.addEventListener('click', exportBoard);
 
     // Add/Edit Task delegators
-    DOM.board.addEventListener('click', (e) => {
+    DOM.board.addEventListener('click', async (e) => {
         const addBtn = e.target.closest('.add-task-btn');
         if (addBtn) openModal(null, addBtn.dataset.status);
 
@@ -888,7 +893,7 @@ function setupEventListeners() {
         if (deleteBtn) showDeleteConfirmation(deleteBtn.dataset.id);
 
         const duplicateBtn = e.target.closest('.duplicate-btn');
-        if (duplicateBtn) duplicateTask(duplicateBtn.dataset.id);
+        if (duplicateBtn) await duplicateTask(duplicateBtn.dataset.id);
 
         const pinBtn = e.target.closest('.pin-btn') || e.target.closest('.pin-btn i');
         if (pinBtn) {
@@ -1050,7 +1055,7 @@ function closeModal() {
     document.body.style.overflow = '';
 }
 
-function handleFormSubmit(e) {
+async function handleFormSubmit(e) {
     e.preventDefault();
 
     const form = e.target;
@@ -1087,12 +1092,17 @@ function handleFormSubmit(e) {
         showToast('Task updated', 'success');
     } else {
         // Add new task
-        taskData.createdAt = Date.now();
-        state.tasks.push(taskData);
-        showToast('Task created', 'success');
+        const docRef = await saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
         
-        // Save to database
-        saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
+        if (docRef) {
+            // Update local task with the correct Firestore ID
+            taskData.id = docRef.id;
+            taskData.createdAt = Date.now(); // Temporary until next refresh
+            state.tasks.push(taskData);
+            showToast('Task created', 'success');
+        } else {
+            showToast('Failed to create task', 'error');
+        }
     }
 
     // saveState(); // DISABLED - Using database
@@ -1296,7 +1306,7 @@ function togglePin(id) {
     }
 }
 
-function duplicateTask(id) {
+async function duplicateTask(id) {
     const taskToDuplicate = state.tasks.find(task => task.id === id);
     if (!taskToDuplicate) return;
 
@@ -1319,8 +1329,14 @@ function duplicateTask(id) {
     // Add new task to beginning of tasks array
     state.tasks.unshift(newTask);
     
-    // Save to database
-    saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority, newTask.subtasks || []);
+    // Save to database and update with correct ID
+    const docRef = await saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority, newTask.subtasks || []);
+    
+    if (docRef) {
+        // Update local task with the correct Firestore ID
+        newTask.id = docRef.id;
+        newTask.createdAt = Date.now(); // Temporary until next refresh
+    }
     
     renderBoard();
 
