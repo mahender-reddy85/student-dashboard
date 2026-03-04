@@ -122,9 +122,9 @@ function hideToast(toastElement) {
 }
 
 // Database Functions
-async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = []) {
+async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], attachmentData = null) {
     try {
-        await addDoc(collection(db, "users", currentUserId, "tasks"), {
+        const taskData = {
             title: title,
             status: status,
             dueDate: dueDate || "",
@@ -132,7 +132,17 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             priority: priority,
             subtasks: subtasks,
             createdAt: new Date()
-        });
+        };
+
+        // Add attachment data if provided
+        if (attachmentData) {
+            taskData.attachment = attachmentData.url;
+            taskData.attachmentType = attachmentData.type;
+            taskData.fileName = attachmentData.name;
+            taskData.fileSize = attachmentData.size;
+        }
+
+        await addDoc(collection(db, "users", currentUserId, "tasks"), taskData);
     } catch (error) {
         console.error("Database save error:", error);
     }
@@ -671,6 +681,19 @@ function createTaskCard(task) {
         </div>
         ${task.description ? `<div class="card-desc">${sanitize(task.description)}</div>` : ''}
         
+        <!-- File Attachment -->
+        ${task.attachment ? `
+        <div class="attachment-preview">
+            ${task.attachmentType === 'image' ? 
+                `<img src="${task.attachment}" alt="${task.fileName || 'Attachment'}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;" />` :
+                `<video src="${task.attachment}" controls style="max-width: 100%; border-radius: 8px; margin-top: 8px;"></video>`
+            }
+            <div class="attachment-info" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                <i class="fas fa-${task.attachmentType === 'image' ? 'image' : 'video'}"></i>
+                ${task.fileName || 'Attachment'}
+            </div>
+        </div>` : ''}
+        
         <!-- Subtask Progress -->
         ${task.subtasks?.length > 0 ? `
         <div class="subtask-progress">
@@ -709,13 +732,96 @@ function createTaskCard(task) {
     return card;
 }
 
+// --- File Upload Functions ---
+async function handleFileDrop(file, status) {
+    try {
+        // Check if file is an image or video
+        const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/ogg'];
+        if (!validTypes.includes(file.type)) {
+            showToast('Please drop an image or video file', 'error');
+            return;
+        }
+
+        // Check file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('File size must be less than 10MB', 'error');
+            return;
+        }
+
+        showToast('Uploading file...', 'info');
+
+        // Create unique file path
+        const filePath = `uploads/${currentUserId}/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, filePath);
+
+        // Upload file to Firebase Storage
+        await uploadBytes(storageRef, file);
+
+        // Get download URL
+        const downloadURL = await getDownloadURL(storageRef);
+
+        // Create task with attachment
+        const taskData = {
+            title: file.name.split('.')[0], // Use filename as task title
+            status: status,
+            attachment: downloadURL,
+            attachmentType: file.type.startsWith('image/') ? 'image' : 'video',
+            fileName: file.name,
+            fileSize: file.size,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+        };
+
+        // Create attachment data
+        const attachmentData = {
+            url: downloadURL,
+            type: file.type.startsWith('image/') ? 'image' : 'video',
+            name: file.name,
+            size: file.size
+        };
+
+        // Save to database with attachment
+        await saveTaskToDatabase(
+            taskData.title,
+            taskData.status,
+            null,
+            '',
+            'medium',
+            [],
+            attachmentData
+        );
+
+        // Add to local state
+        const newTask = {
+            ...taskData,
+            id: Date.now().toString(),
+            attachment: downloadURL,
+            attachmentType: attachmentData.type,
+            fileName: file.name,
+            fileSize: file.size
+        };
+
+        state.tasks.push(newTask);
+        renderBoard();
+
+        showToast('File uploaded successfully!', 'success');
+
+    } catch (error) {
+        console.error('File upload error:', error);
+        showToast('Failed to upload file', 'error');
+    }
+}
+
 // --- Drag and Drop ---
+let isDragging = false;
+
 function attachDragEvents() {
     const cards = document.querySelectorAll('.task-card');
     const dropzones = document.querySelectorAll('.task-list');
 
     cards.forEach(card => {
         card.addEventListener('dragstart', (e) => {
+            isDragging = true;
             e.dataTransfer.setData('text/plain', card.dataset.id);
             setTimeout(() => {
                 card.classList.add('dragging');
@@ -723,23 +829,39 @@ function attachDragEvents() {
         });
 
         card.addEventListener('dragend', () => {
+            isDragging = false;
             card.classList.remove('dragging');
-            renderBoard(); // Cleanup and persist
+            // Add small delay to prevent race condition with drag operations
+            setTimeout(() => {
+                renderBoard(); // Cleanup and persist
+            }, 50);
         });
     });
 
     dropzones.forEach(zone => {
         zone.addEventListener('dragover', (e) => {
+            // Prevent dragover if drag operation has ended
+            if (!isDragging) return;
+            
             e.preventDefault();
             const afterElement = getDragAfterElement(zone, e.clientY);
             const card = document.querySelector('.dragging');
 
-            if (!card) return; // Exit if no dragging card found
+            // Validate that card is a valid DOM element
+            if (!card || !(card instanceof HTMLElement)) return;
 
-            if (afterElement) {
-                zone.insertBefore(card, afterElement);
-            } else {
-                zone.appendChild(card);
+            // Validate that afterElement is null or a valid DOM element
+            if (afterElement && !(afterElement instanceof HTMLElement)) return;
+
+            try {
+                if (afterElement) {
+                    zone.insertBefore(card, afterElement);
+                } else {
+                    zone.appendChild(card);
+                }
+            } catch (error) {
+                console.error('Drag and drop error:', error);
+                // Fallback: don't move the element
             }
         });
 
@@ -747,24 +869,46 @@ function attachDragEvents() {
             e.preventDefault();
             const taskId = e.dataTransfer.getData('text/plain');
             const status = zone.dataset.status;
+            
+            // Check if files were dropped
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileDrop(files[0], status);
+                return;
+            }
+            
             updateTaskStatus(taskId, status);
         });
     });
 }
 
 function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
-
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
+    try {
+        const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+        
+        if (draggableElements.length === 0) {
+            return null;
         }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
+
+        return draggableElements.reduce((closest, child) => {
+            // Ensure child is a valid element
+            if (!(child instanceof HTMLElement)) {
+                return closest;
+            }
+            
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    } catch (error) {
+        console.error('getDragAfterElement error:', error);
+        return null;
+    }
 }
 
 function updateTaskStatus(id, status) {
@@ -1094,7 +1238,7 @@ function handleFormSubmit(e) {
         showToast('Task created', 'success');
         
         // Save to database
-        saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
+        saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks, null);
     }
 
     // saveState(); // DISABLED - Using database
@@ -1270,7 +1414,7 @@ function duplicateTask(id) {
     state.tasks.unshift(newTask);
     
     // Save to database
-    saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority, newTask.subtasks || []);
+    saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority, newTask.subtasks || [], null);
     
     renderBoard();
 
