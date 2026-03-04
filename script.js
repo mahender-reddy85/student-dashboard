@@ -8,6 +8,10 @@
  * @property {string} sortOrder - Sort order ('none', 'asc', 'desc')
  * @property {Object|null} lastDeletedTask - Last deleted task for undo functionality
  */
+// Global variables from index.html
+let currentUserId = window.currentUserId || null;
+let db = window.db || null;
+
 const state = {
     tasks: [],
     theme: (() => {
@@ -1047,16 +1051,22 @@ function setupEventListeners() {
     }
 
     async function clearBoard() {
+        console.log('Clear board called, currentUserId:', currentUserId);
+        
         // Store the current tasks for potential undo
         const previousTasks = [...state.tasks];
+        console.log('Previous tasks stored:', previousTasks.length);
 
         // Clear the board
         state.tasks = [];
         
         // Clear database for skip auth users
         if (currentUserId === 'skip-auth-user') {
+            console.log('Clearing localStorage for skip auth user');
             localStorage.removeItem('skip-auth-tasks');
+            console.log('localStorage cleared');
         } else {
+            console.log('User is not skip auth, currentUserId:', currentUserId);
             // For authenticated users, we would need to delete all tasks from Firestore
             // This is more complex and requires batched deletes
             // For now, we'll just clear local state
@@ -1071,11 +1081,13 @@ function setupEventListeners() {
             'error',
             5000,
             async () => {
+                console.log('Undo clear board called');
                 // Undo clear action
                 state.tasks = previousTasks;
                 
                 // Restore database for skip auth users
                 if (currentUserId === 'skip-auth-user') {
+                    console.log('Restoring tasks to localStorage');
                     localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
                 }
                 
