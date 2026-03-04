@@ -286,7 +286,9 @@
             getDocs,
             doc,
             deleteDoc,
-            updateDoc
+            updateDoc,
+            getDoc,
+            setDoc
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -313,6 +315,8 @@
         window.doc = doc;
         window.deleteDoc = deleteDoc;
         window.updateDoc = updateDoc;
+        window.getDoc = getDoc;
+        window.setDoc = setDoc;
 
         // Auth imports for user management
         import { getAuth, onAuthStateChanged, signOut } 

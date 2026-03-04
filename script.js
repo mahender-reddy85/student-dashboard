@@ -120,7 +120,7 @@ function hideToast(toastElement) {
 }
 
 // Database Functions
-async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium') {
+async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = []) {
     try {
         await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
@@ -128,6 +128,7 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             dueDate: dueDate || "",
             description: description,
             priority: priority,
+            subtasks: subtasks,
             createdAt: new Date()
         });
     } catch (error) {
@@ -138,9 +139,29 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
 async function updateTaskInDatabase(taskId, taskData) {
     try {
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
-        await updateDoc(taskRef, taskData);
+        
+        // First check if document exists
+        const taskDoc = await getDoc(taskRef);
+        if (!taskDoc.exists()) {
+            console.warn(`Task ${taskId} not found in database, creating new document`);
+            // If document doesn't exist, create it instead
+            await setDoc(taskRef, {
+                ...taskData,
+                id: taskId,
+                userId: currentUserId,
+                createdAt: Date.now(),
+                updatedAt: Date.now()
+            });
+        } else {
+            // Document exists, update it
+            await updateDoc(taskRef, {
+                ...taskData,
+                updatedAt: Date.now()
+            });
+        }
     } catch (error) {
         console.error("Database update error:", error);
+        showToast('Failed to update task', 'error');
     }
 }
 
@@ -1054,6 +1075,8 @@ function handleFormSubmit(e) {
     if (existingTask) {
         // Update existing task
         Object.assign(existingTask, taskData);
+        // Update in database
+        updateTaskInDatabase(id, taskData);
         showToast('Task updated', 'success');
     } else {
         // Add new task
@@ -1062,7 +1085,7 @@ function handleFormSubmit(e) {
         showToast('Task created', 'success');
         
         // Save to database
-        saveTaskToDatabase(title, status, dueDate, description, priority);
+        saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
     }
 
     // saveState(); // DISABLED - Using database
@@ -1236,7 +1259,7 @@ function duplicateTask(id) {
     state.tasks.unshift(newTask);
     
     // Save to database
-    saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority);
+    saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority, newTask.subtasks || []);
     
     renderBoard();
 
