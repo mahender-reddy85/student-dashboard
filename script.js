@@ -119,7 +119,7 @@ function hideToast(toastElement) {
     }, 300);
 }
 
-// Firebase Functions
+// Database Functions
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium') {
     try {
         await addDoc(collection(db, "users", currentUserId, "tasks"), {
@@ -237,10 +237,10 @@ function init() {
     }
 }
 
-// Saves the current application state to localStorage (DISABLED - Using Firebase instead)
+// Saves the current application state to localStorage (DISABLED - Using database instead)
 function saveState() {
     try {
-        // DISABLED: Using Firebase for persistence now
+        // DISABLED: Using Database for persistence now
         // const stateToSave = {
         //     tasks: state.tasks,
         //     lastDeletedTask: state.lastDeletedTask
@@ -253,10 +253,10 @@ function saveState() {
     }
 }
 
-// Loads the application state from localStorage (DISABLED - Using Firebase instead)
+// Loads the application state from localStorage (DISABLED - Using Database instead)
 function loadState() {
     try {
-        // DISABLED: Using Firebase for persistence now
+        // DISABLED: Using Database for persistence now
         // const savedState = localStorage.getItem('kanbanflow_state');
         // if (savedState) {
         //     const parsedState = JSON.parse(savedState);
@@ -743,7 +743,7 @@ function updateTaskStatus(id, status) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
         task.status = status;
-        // Update in Firebase
+        // Update in database
         updateTaskInDatabase(id, { status: status });
         renderBoard();
     }
