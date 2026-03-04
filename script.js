@@ -55,7 +55,9 @@ function showToast(message, type = 'info', duration = 5000, undoAction = null) {
     container.appendChild(toast);
 
     // Trigger reflow to enable the show animation
-    setTimeout(() => toast.classList.add('show'), 10);
+    if (toast) {
+        setTimeout(() => toast.classList.add('show'), 10);
+    }
 
     // Set up close button
     const closeBtn = document.getElementById(`${toastId}-close`);
@@ -535,7 +537,10 @@ function renderBoard() {
         if (columnTasks.length > 0) {
             const listEl = colEl.querySelector('.task-list');
             columnTasks.forEach(task => {
-                listEl.appendChild(createTaskCard(task));
+                const taskCard = createTaskCard(task);
+                if (taskCard) {
+                    listEl.appendChild(taskCard);
+                }
             });
         }
 
@@ -728,6 +733,8 @@ function attachDragEvents() {
             e.preventDefault();
             const afterElement = getDragAfterElement(zone, e.clientY);
             const card = document.querySelector('.dragging');
+
+            if (!card) return; // Exit if no dragging card found
 
             if (afterElement) {
                 zone.insertBefore(card, afterElement);
@@ -1021,7 +1028,9 @@ function openModal(taskId = null, status = 'todo') {
             if (task.subtasks && task.subtasks.length > 0) {
                 task.subtasks.forEach((subtask, index) => {
                     const subtaskEl = createSubtaskElement(subtask, index);
-                    subtasksContainer.appendChild(subtaskEl);
+                    if (subtaskEl) {
+                        subtasksContainer.appendChild(subtaskEl);
+                    }
                 });
             }
         }
@@ -1183,7 +1192,9 @@ function addSubtask(text, completed = false) {
     const subtasksContainer = document.getElementById('subtasksContainer');
     const subtask = { text, completed };
     const subtaskEl = createSubtaskElement(subtask, subtasksContainer.children.length);
-    subtasksContainer.appendChild(subtaskEl);
+    if (subtaskEl) {
+        subtasksContainer.appendChild(subtaskEl);
+    }
 
     // Clear input and focus it
     const input = document.getElementById('newSubtaskInput');
@@ -1342,9 +1353,11 @@ function showNotification(message, type = 'info') {
     document.body.appendChild(notification);
 
     // Add show class after a small delay to trigger the animation
-    setTimeout(() => {
-        notification.classList.add('show');
-    }, 10);
+    if (notification) {
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 10);
+    }
 
     // Remove notification after 3 seconds
     const duration = type === 'error' ? 5000 : 3000; // Show errors longer
