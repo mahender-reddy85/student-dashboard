@@ -389,7 +389,7 @@ function init() {
         document.body.classList.add('loaded');
 
         // Show welcome message
-        showToast('Welcome to YoursKanban!', 'success');
+        showToast('Welcome to your dashboard!', 'success');
 
         // Note: Tasks will be loaded by auth state change in index.html
     } catch (error) {
