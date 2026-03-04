@@ -78,6 +78,31 @@
       border-color: #5a6268;
     }
 
+    .divider {
+      margin: 20px 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #ddd;
+    }
+
+    .divider span {
+      background: #fff;
+      padding: 0 15px;
+      color: #999;
+      font-size: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
     form {
       background-color: #FFFFFF;
       display: flex;
@@ -416,6 +441,9 @@
         <input type="password" id="login-password" placeholder="Password" />
         <button type="button" onclick="login()">Sign In</button>
       </form>
+      <div class="divider">
+        <span>or Google</span>
+      </div>
       <button type="button" class="skip-btn" id="skipAuth">Skip Auth</button>
     </div>
     <div class="overlay-container">
