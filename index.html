@@ -128,6 +128,20 @@
     </nav>
 
     <main class="main-content">
+        <div class="user-info-banner" id="userInfoBanner">
+            <div class="user-info-content">
+                <div class="user-details">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="user-email-display">Loading...</span>
+                    <span class="user-status-indicator online"></span>
+                </div>
+                <button class="logout-banner-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+        
         <div class="board" id="board">
         </div>
 
@@ -295,11 +309,14 @@
             localStorage.removeItem('skipAuth');
             window.currentUserId = 'skip-auth-user';
             updateUserProfile('Skip Auth User');
+            updateUserBanner('Skip Auth User');
             loadTasks();
           } else if (user) {
             console.log("Logged in user:", user.uid);
             window.currentUserId = user.uid;
-            updateUserProfile(user.email || 'Anonymous User');
+            const userEmail = user.email || 'Anonymous User';
+            updateUserProfile(userEmail);
+            updateUserBanner(userEmail);
             loadTasks();
             
             // Auto-redirect check - if coming from auth page, show success message
@@ -319,6 +336,14 @@
           const userEmailElement = document.getElementById('userEmail');
           if (userEmailElement) {
             userEmailElement.textContent = email;
+          }
+        }
+
+        // Update user banner display
+        function updateUserBanner(email) {
+          const userEmailDisplayElement = document.getElementById('user-email-display');
+          if (userEmailDisplayElement) {
+            userEmailDisplayElement.textContent = email;
           }
         }
 
