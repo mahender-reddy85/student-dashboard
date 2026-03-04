@@ -25,7 +25,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Export Firebase services - ADD THIS LINE
+// Export Firebase services - THIS IS THE MISSING LINE
 export { app, db };
 
 // Make available globally

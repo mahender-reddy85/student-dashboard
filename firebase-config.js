@@ -33,3 +33,6 @@ window.getDocs = getDocs;
 window.doc = doc;
 window.deleteDoc = deleteDoc;
 window.updateDoc = updateDoc;
+
+// Export for module imports
+export { app, db };
