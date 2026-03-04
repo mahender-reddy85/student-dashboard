@@ -542,8 +542,7 @@
     </div>
   </div>
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
+    import {
       getAuth,
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
@@ -551,18 +550,9 @@
       GoogleAuthProvider,
       onAuthStateChanged,
       signOut
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    } from "./firebase-config.js";
+    import { app } from "./firebase-config.js";
 
-    const firebaseConfig = {
-      apiKey: "YOUR_KEY",
-      authDomain: "student-dashboard-2c69c.firebaseapp.com",
-      projectId: "student-dashboard-2c69c",
-      storageBucket: "student-dashboard-2c69c.appspot.com",
-      messagingSenderId: "460268749441",
-      appId: "1:460268749441:web:67baf73c70f34bd9130380"
-    };
-
-    const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
