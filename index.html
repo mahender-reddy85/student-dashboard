@@ -280,7 +280,8 @@
             updateDoc,
             getDoc,
             setDoc,
-            serverTimestamp
+            serverTimestamp,
+            writeBatch
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -310,6 +311,7 @@
         window.getDoc = getDoc;
         window.setDoc = setDoc;
         window.serverTimestamp = serverTimestamp;
+        window.writeBatch = writeBatch;
         window.getStorage = getStorage;
         window.ref = ref;
         window.uploadBytes = uploadBytes;

@@ -11,6 +11,7 @@
 // Global variables from index.html
 let currentUserId = window.currentUserId || null;
 let db = window.db || null;
+let writeBatch = window.writeBatch || null;
 
 // Flag to prevent reloading during clear/undo operations
 let isClearingOrUndoing = false;
@@ -22,6 +23,9 @@ function updateGlobalVariables() {
     }
     if (window.db !== undefined) {
         db = window.db;
+    }
+    if (window.writeBatch !== undefined) {
+        writeBatch = window.writeBatch;
     }
 }
 
@@ -1109,9 +1113,24 @@ function setupEventListeners() {
         if (currentUserId === 'skip-auth-user') {
             localStorage.removeItem('skip-auth-tasks');
         } else {
-            // For authenticated users, we would need to delete all tasks from Firestore
-            // This is more complex and requires batched deletes
-            // For now, we'll just clear local state
+            // For authenticated users, delete all tasks from Firestore using batch
+            try {
+                const batch = writeBatch(db);
+                const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
+                
+                querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+                
+                await batch.commit();
+            } catch (error) {
+                console.error("Error clearing tasks from Firestore:", error);
+                showToast('Failed to clear all tasks from database', 'error');
+                // Restore tasks on error
+                state.tasks = previousTasks;
+                isClearingOrUndoing = false;
+                return;
+            }
         }
         
         renderBoard();
@@ -1132,6 +1151,32 @@ function setupEventListeners() {
                 // Restore database for skip auth users
                 if (currentUserId === 'skip-auth-user') {
                     localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
+                } else {
+                    // For authenticated users, restore all tasks to Firestore
+                    try {
+                        const batch = writeBatch(db);
+                        
+                        previousTasks.forEach((task) => {
+                            const docRef = doc(db, "users", currentUserId, "tasks", task.id);
+                            batch.set(docRef, {
+                                title: task.title,
+                                status: task.status,
+                                dueDate: task.dueDate ? new Date(task.dueDate) : null,
+                                description: task.description || '',
+                                priority: task.priority || 'medium',
+                                pinned: task.pinned || false,
+                                userId: currentUserId,
+                                subtasks: task.subtasks || [],
+                                createdAt: task.createdAt ? new Date(task.createdAt) : serverTimestamp(),
+                                updatedAt: serverTimestamp()
+                            });
+                        });
+                        
+                        await batch.commit();
+                    } catch (error) {
+                        console.error("Error restoring tasks to Firestore:", error);
+                        showToast('Failed to restore tasks', 'error');
+                    }
                 }
                 
                 renderBoard();
@@ -1143,6 +1188,11 @@ function setupEventListeners() {
                 }, 500);
             }
         );
+        
+        // Clear flag after a short delay
+        setTimeout(() => {
+            isClearingOrUndoing = false;
+        }, 500);
     }
 
     // Clear Board Button
