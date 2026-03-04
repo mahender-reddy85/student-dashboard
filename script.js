@@ -1227,7 +1227,7 @@ function duplicateTask(id) {
     newTask.createdAt = Date.now();
     newTask.updatedAt = Date.now();
 
-    // Add " (Copy)" to title if it doesn't already have it
+    // Add "(Copy)" to title if it doesn't already have it
     if (!newTask.title.includes(' (Copy)')) {
         newTask.title = `${newTask.title} (Copy)`;
     }
