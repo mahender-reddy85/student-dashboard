@@ -1046,13 +1046,22 @@ function setupEventListeners() {
         document.body.style.overflow = '';
     }
 
-    function clearBoard() {
+    async function clearBoard() {
         // Store the current tasks for potential undo
         const previousTasks = [...state.tasks];
 
         // Clear the board
         state.tasks = [];
-        // saveState(); // DISABLED - Using database
+        
+        // Clear database for skip auth users
+        if (currentUserId === 'skip-auth-user') {
+            localStorage.removeItem('skip-auth-tasks');
+        } else {
+            // For authenticated users, we would need to delete all tasks from Firestore
+            // This is more complex and requires batched deletes
+            // For now, we'll just clear local state
+        }
+        
         renderBoard();
         hideClearBoardConfirmation();
 
@@ -1061,10 +1070,15 @@ function setupEventListeners() {
             'Board cleared',
             'error',
             5000,
-            () => {
+            async () => {
                 // Undo clear action
                 state.tasks = previousTasks;
-                // saveState(); // DISABLED - Using database
+                
+                // Restore database for skip auth users
+                if (currentUserId === 'skip-auth-user') {
+                    localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
+                }
+                
                 renderBoard();
                 showToast('Board restored', 'success');
             }
