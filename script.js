@@ -124,6 +124,28 @@ function hideToast(toastElement) {
 // Database Functions
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = []) {
     try {
+        // Check if user is using skip auth
+        if (currentUserId === 'skip-auth-user') {
+            // Use localStorage for skip auth users
+            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            const newTask = {
+                id: Date.now().toString(),
+                title,
+                status,
+                dueDate,
+                description,
+                priority,
+                subtasks,
+                pinned: false,
+                userId: currentUserId,
+                createdAt: new Date().getTime(),
+                updatedAt: new Date().getTime()
+            };
+            tasks.push(newTask);
+            localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
+            return { id: newTask.id };
+        }
+        
         // Convert dueDate to Firestore Timestamp if provided
         const dueDateTimestamp = dueDate ? new Date(dueDate) : null;
         
@@ -150,6 +172,22 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
 
 async function updateTaskInDatabase(taskId, taskData) {
     try {
+        // Check if user is using skip auth
+        if (currentUserId === 'skip-auth-user') {
+            // Use localStorage for skip auth users
+            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            const taskIndex = tasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex] = {
+                    ...tasks[taskIndex],
+                    ...taskData,
+                    updatedAt: new Date().getTime()
+                };
+                localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
+            }
+            return;
+        }
+        
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         
         // First check if document exists
@@ -180,6 +218,15 @@ async function updateTaskInDatabase(taskId, taskData) {
 
 async function deleteTaskFromDatabase(taskId) {
     try {
+        // Check if user is using skip auth
+        if (currentUserId === 'skip-auth-user') {
+            // Use localStorage for skip auth users
+            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            const filteredTasks = tasks.filter(task => task.id !== taskId);
+            localStorage.setItem('skip-auth-tasks', JSON.stringify(filteredTasks));
+            return;
+        }
+        
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
     } catch (error) {
@@ -189,11 +236,19 @@ async function deleteTaskFromDatabase(taskId) {
 
 async function loadTasksFromDatabase() {
     try {
-        // Clear local state first to prevent duplicates
+        // Check if user is using skip auth
+        if (currentUserId === 'skip-auth-user') {
+            // Use localStorage for skip auth users
+            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            state.tasks = tasks;
+            renderBoard();
+            return;
+        }
+        
+        // Clear existing tasks to avoid duplicates
         state.tasks = [];
         
         const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
-
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
