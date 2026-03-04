@@ -11,7 +11,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA6XSEmelzRwqR5VnoijqcHM_6nfNuNRQw",
+  apiKey: "AIzaSyCGtESYwNTtp0eaOjCc-ii-ukTjXJ7LIyY",
   authDomain: "student-dashboard-2c69c.firebaseapp.com",
   databaseURL: "https://student-dashboard-2c69c-default-rtdb.firebaseio.com",
   projectId: "student-dashboard-2c69c",
