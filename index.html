@@ -34,13 +34,13 @@
         <div class="nav-actions">
             <div class="user-profile" id="userProfile">
                 <div class="profile-avatar" id="profileAvatar">
-                    <img src="https://picsum.photos/seed/defaultuser/40/40.jpg" alt="User Avatar" id="userAvatarImg">
+                    <div class="avatar-text" id="userAvatarText">U</div>
                     <div class="avatar-status online"></div>
                 </div>
                 <div class="profile-dropdown" id="profileDropdown">
                     <div class="profile-header">
                         <div class="profile-avatar-large">
-                            <img src="https://picsum.photos/seed/defaultuser/60/60.jpg" alt="User Avatar" id="userAvatarImgLarge">
+                            <div class="avatar-text-large" id="userAvatarTextLarge">U</div>
                             <div class="avatar-status online"></div>
                         </div>
                         <div class="profile-info">
@@ -327,20 +327,18 @@
             userEmailElement.textContent = email;
           }
           
-          // Generate avatar based on email
-          const avatarSeed = email.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'defaultuser';
-          const avatarUrl = `https://picsum.photos/seed/${avatarSeed}/40/40.jpg`;
-          const avatarUrlLarge = `https://picsum.photos/seed/${avatarSeed}/60/60.jpg`;
+          // Get first letter of email/username
+          const firstLetter = email.charAt(0).toUpperCase() || 'U';
           
-          // Update avatar images
-          const userAvatarImg = document.getElementById('userAvatarImg');
-          const userAvatarImgLarge = document.getElementById('userAvatarImgLarge');
+          // Update avatar text elements
+          const userAvatarText = document.getElementById('userAvatarText');
+          const userAvatarTextLarge = document.getElementById('userAvatarTextLarge');
           
-          if (userAvatarImg) {
-            userAvatarImg.src = avatarUrl;
+          if (userAvatarText) {
+            userAvatarText.textContent = firstLetter;
           }
-          if (userAvatarImgLarge) {
-            userAvatarImgLarge.src = avatarUrlLarge;
+          if (userAvatarTextLarge) {
+            userAvatarTextLarge.textContent = firstLetter;
           }
         }
 

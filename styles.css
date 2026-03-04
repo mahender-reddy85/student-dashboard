@@ -1501,6 +1501,22 @@ object-fit: cover;
 border: 2px solid var(--border-color);
 }
 
+.avatar-text {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    color: white;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+    border: 2px solid var(--border-color);
+    text-transform: uppercase;
+    user-select: none;
+}
+
 .avatar-status {
 position: absolute;
 bottom: 2px;
@@ -1566,6 +1582,23 @@ height: 60px;
 border-radius: 50%;
 object-fit: cover;
 border: 3px solid var(--bg-secondary);
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-text-large {
+width: 60px;
+height: 60px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+font-weight: 600;
+font-size: 24px;
+color: white;
+background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+border: 3px solid var(--bg-secondary);
+text-transform: uppercase;
+user-select: none;
 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
