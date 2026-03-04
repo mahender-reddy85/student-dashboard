@@ -66,6 +66,11 @@
       background-color: #6c757d;
       border-color: #6c757d;
       margin-top: 20px;
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
     }
 
     button.skip-btn:hover {
@@ -379,6 +384,15 @@
       input {
         padding: 12px 15px;
         font-size: 16px;
+      }
+
+      .skip-btn {
+        position: relative !important;
+        bottom: auto !important;
+        left: auto !important;
+        transform: none !important;
+        margin: 20px auto !important;
+        display: block !important;
       }
     }
   </style>
