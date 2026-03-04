@@ -560,11 +560,38 @@
       const email = document.getElementById("signup-email").value;
       const password = document.getElementById("signup-password").value;
 
+      // Validate email input
+      if (!email || email.trim() === '') {
+        alert("Please enter email");
+        return;
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        alert("Invalid mail");
+        return;
+      }
+
+      if (!password || password.trim() === '') {
+        alert("Please enter password");
+        return;
+      }
+
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         window.location.href = "index.html?from=auth";
       } catch (error) {
-        alert(error.message);
+        // Custom error messages
+        if (error.code === 'auth/invalid-email') {
+          alert("Invalid mail");
+        } else if (error.code === 'auth/email-already-in-use') {
+          alert("Email already registered");
+        } else if (error.code === 'auth/weak-password') {
+          alert("Password should be at least 6 characters");
+        } else {
+          alert("Registration failed. Please try again.");
+        }
       }
     }
 
@@ -572,21 +599,54 @@
       const email = document.getElementById("login-email").value;
       const password = document.getElementById("login-password").value;
 
+      // Validate email input
+      if (!email || email.trim() === '') {
+        alert("Please enter email");
+        return;
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        alert("Invalid mail");
+        return;
+      }
+
+      if (!password || password.trim() === '') {
+        alert("Please enter password");
+        return;
+      }
+
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         window.location.href = "index.html?from=auth";
       } catch (error) {
-        alert(error.message);
+        // Custom error messages
+        if (error.code === 'auth/invalid-email') {
+          alert("Invalid mail");
+        } else if (error.code === 'auth/user-not-found') {
+          alert("User not found");
+        } else if (error.code === 'auth/wrong-password') {
+          alert("Incorrect password");
+        } else {
+          alert("Login failed. Please try again.");
+        }
       }
     }
 
     window.googleLogin = async function () {
       try {
         const result = await signInWithPopup(auth, provider);
-        alert("Google sign-in successful!");
         window.location.href = "index.html?from=auth";
       } catch (error) {
-        alert(error.message);
+        // Custom error messages for Google login
+        if (error.code === 'auth/popup-closed-by-user') {
+          alert("Google sign-in cancelled");
+        } else if (error.code === 'auth/popup-blocked') {
+          alert("Popup blocked. Please allow popups and try again");
+        } else {
+          alert("Google sign-in failed. Please try again.");
+        }
       }
     }
 
