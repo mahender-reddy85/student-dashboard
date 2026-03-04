@@ -124,10 +124,13 @@ function hideToast(toastElement) {
 // Database Functions
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = []) {
     try {
+        // Convert dueDate to Firestore Timestamp if provided
+        const dueDateTimestamp = dueDate ? new Date(dueDate) : null;
+        
         const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             status: status,
-            dueDate: dueDate || "",
+            dueDate: dueDateTimestamp,
             description: description,
             priority: priority,
             pinned: false,
@@ -194,14 +197,29 @@ async function loadTasksFromDatabase() {
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
+            // Handle Firestore Timestamps properly
+            const getTimestampValue = (timestamp) => {
+                if (!timestamp) return null;
+                if (typeof timestamp.toDate === 'function') {
+                    return timestamp.toDate().getTime();
+                }
+                if (typeof timestamp === 'number') {
+                    return timestamp;
+                }
+                if (typeof timestamp === 'string') {
+                    return new Date(timestamp).getTime();
+                }
+                return new Date(timestamp).getTime();
+            };
+
             // Create task object with all fields from database
             const task = {
                 id: doc.id, // Use actual Firestore document ID
                 title: data.title,
                 status: data.status,
-                dueDate: data.dueDate || null,
-                createdAt: data.createdAt ? new Date(data.createdAt).getTime() : Date.now(),
-                updatedAt: data.updatedAt ? new Date(data.updatedAt).getTime() : Date.now(),
+                dueDate: getTimestampValue(data.dueDate),
+                createdAt: getTimestampValue(data.createdAt),
+                updatedAt: getTimestampValue(data.updatedAt),
                 description: data.description || '',
                 priority: data.priority || 'medium',
                 pinned: data.pinned || false,
@@ -461,8 +479,31 @@ function sortTasksByDueDate(tasks, order) {
     if (order === 'none') return [...tasks];
 
     return [...tasks].sort((a, b) => {
-        const dateA = a.dueDate ? new Date(a.dueDate) : new Date(0);
-        const dateB = b.dueDate ? new Date(b.dueDate) : new Date(0);
+        // Handle Firestore Timestamp objects and regular dates
+        const getDateValue = (date) => {
+            if (!date) return new Date(0);
+            
+            // If it's a Firestore Timestamp (has toDate method)
+            if (date && typeof date.toDate === 'function') {
+                return date.toDate();
+            }
+            
+            // If it's a number (milliseconds)
+            if (typeof date === 'number') {
+                return new Date(date);
+            }
+            
+            // If it's a string date
+            if (typeof date === 'string') {
+                return new Date(date);
+            }
+            
+            // Default: treat as date object
+            return new Date(date);
+        };
+
+        const dateA = getDateValue(a.dueDate);
+        const dateB = getDateValue(b.dueDate);
 
         // If both tasks don't have due dates, maintain their order
         if (!a.dueDate && !b.dueDate) return 0;
@@ -1069,6 +1110,9 @@ async function handleFormSubmit(e) {
     // Get current subtasks from UI
     const currentSubtasks = getSubtasksFromUI();
     
+    // Convert dueDate to timestamp for database
+    const dueDateTimestamp = dueDate ? new Date(dueDate).getTime() : null;
+    
     // Find existing task or create new one
     const existingTask = state.tasks.find(t => t.id === id);
     const taskData = {
@@ -1077,7 +1121,7 @@ async function handleFormSubmit(e) {
         description: description || '',
         priority,
         status,
-        dueDate: dueDate ? new Date(dueDate).getTime() : null,
+        dueDate: dueDateTimestamp,
         pinned: existingTask?.pinned || false,
         subtasks: currentSubtasks.length > 0 ? currentSubtasks : (existingTask?.subtasks || []),
         userId: currentUserId,
@@ -1330,7 +1374,14 @@ async function duplicateTask(id) {
     state.tasks.unshift(newTask);
     
     // Save to database and update with correct ID
-    const docRef = await saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority, newTask.subtasks || []);
+    const docRef = await saveTaskToDatabase(
+        newTask.title, 
+        newTask.status, 
+        newTask.dueDate, 
+        newTask.description, 
+        newTask.priority, 
+        newTask.subtasks || []
+    );
     
     if (docRef) {
         // Update local task with the correct Firestore ID
