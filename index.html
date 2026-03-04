@@ -291,12 +291,12 @@
             // Clear the flag after using it
             localStorage.removeItem('skipAuth');
             window.currentUserId = 'skip-auth-user';
-            updateUserProfile('Skip Auth User');
+            updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
             loadTasks();
           } else if (user) {
             window.currentUserId = user.uid;
             const userEmail = user.email || 'Anonymous User';
-            updateUserProfile(userEmail);
+            updateUserProfile(userEmail, false); // Normal user, show avatar
             loadTasks();
             
             // Auto-redirect check - if coming from auth page, show success message
@@ -312,24 +312,38 @@
         });
 
         // Update user profile display
-        function updateUserProfile(email) {
+        function updateUserProfile(email, hideAvatar = false) {
           const userEmailElement = document.getElementById('userEmail');
           if (userEmailElement) {
             userEmailElement.textContent = email;
           }
           
-          // Get first letter of email/username
-          const firstLetter = email.charAt(0).toUpperCase() || 'U';
-          
-          // Update avatar text elements
+          // Handle avatar display
+          const profileAvatar = document.getElementById('profileAvatar');
           const userAvatarText = document.getElementById('userAvatarText');
           const userAvatarTextLarge = document.getElementById('userAvatarTextLarge');
           
-          if (userAvatarText) {
-            userAvatarText.textContent = firstLetter;
-          }
-          if (userAvatarTextLarge) {
-            userAvatarTextLarge.textContent = firstLetter;
+          if (hideAvatar) {
+            // Hide avatar for skip auth users
+            if (profileAvatar) {
+              profileAvatar.style.display = 'none';
+            }
+          } else {
+            // Show avatar for normal users
+            if (profileAvatar) {
+              profileAvatar.style.display = 'flex';
+            }
+            
+            // Get first letter of email/username
+            const firstLetter = email.charAt(0).toUpperCase() || 'U';
+            
+            // Update avatar text elements
+            if (userAvatarText) {
+              userAvatarText.textContent = firstLetter;
+            }
+            if (userAvatarTextLarge) {
+              userAvatarTextLarge.textContent = firstLetter;
+            }
           }
         }
 
