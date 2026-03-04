@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Student Productivity & Task Management Board - A Trello-style task management board for organizing your work">
+    <meta name="description"
+        content="Student Productivity & Task Management Board - A Trello-style task management board for organizing your work">
     <meta name="theme-color" content="#3b82f6">
     <meta name="author" content="Likki Mahender Reddy">
     <meta name="keywords" content="kanban, task management, productivity, trello alternative">
@@ -200,7 +201,8 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="deleteConfirmModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-overlay" id="deleteConfirmModal" style="display: none;" role="dialog" aria-modal="true"
+        aria-labelledby="deleteModalTitle">
         <div class="modal" style="max-width: 400px;">
             <div class="modal-header">
                 <h3 id="deleteModalTitle">Delete Task</h3>
@@ -270,10 +272,10 @@
     <script type="module">
         // Firebase Configuration and Initialization
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getFirestore, 
-            addDoc, 
-            collection, 
+        import {
+            getFirestore,
+            addDoc,
+            collection,
             getDocs,
             doc,
             deleteDoc,
@@ -318,128 +320,128 @@
         window.getDownloadURL = getDownloadURL;
 
         // Auth imports for user management
-        import { getAuth, onAuthStateChanged, signOut } 
-        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } 
-        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { getAuth, onAuthStateChanged, signOut }
+            from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL }
+            from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const auth = getAuth(app);
         const storage = getStorage(app);
 
         onAuthStateChanged(auth, (user) => {
-          // Check if user has skipped authentication or is a returning skip auth user
-          const skipAuth = localStorage.getItem('skipAuth');
-          const isSkipAuthUser = localStorage.getItem('isSkipAuthUser');
-          
-          if (skipAuth === 'true') {
-            // Clear the one-time flag after using it
-            localStorage.removeItem('skipAuth');
-            localStorage.setItem('isSkipAuthUser', 'true');
-            window.currentUserId = 'skip-auth-user';
-            updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
-            loadTasks();
-          } else if (isSkipAuthUser === 'true') {
-            // Returning skip auth user
-            window.currentUserId = 'skip-auth-user';
-            updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
-            loadTasks();
-          } else if (user) {
-            window.currentUserId = user.uid;
-            const userEmail = user.email || 'Anonymous User';
-            updateUserProfile(userEmail, false); // Normal user, show avatar
-            loadTasks();
-            
-            // Auto-redirect check - if coming from auth page, show success message
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('from') === 'auth') {
-              showToast('Successfully logged in!', 'success');
-              // Clean up URL
-              window.history.replaceState({}, document.title, window.location.pathname);
+            // Check if user has skipped authentication or is a returning skip auth user
+            const skipAuth = localStorage.getItem('skipAuth');
+            const isSkipAuthUser = localStorage.getItem('isSkipAuthUser');
+
+            if (skipAuth === 'true') {
+                // Clear the one-time flag after using it
+                localStorage.removeItem('skipAuth');
+                localStorage.setItem('isSkipAuthUser', 'true');
+                window.currentUserId = 'skip-auth-user';
+                updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
+                loadTasks();
+            } else if (isSkipAuthUser === 'true') {
+                // Returning skip auth user
+                window.currentUserId = 'skip-auth-user';
+                updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
+                loadTasks();
+            } else if (user) {
+                window.currentUserId = user.uid;
+                const userEmail = user.email || 'Anonymous User';
+                updateUserProfile(userEmail, false); // Normal user, show avatar
+                loadTasks();
+
+                // Auto-redirect check - if coming from auth page, show success message
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('from') === 'auth') {
+                    showToast('Successfully logged in!', 'success');
+                    // Clean up URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } else {
+                window.location.href = "auth.html";
             }
-          } else {
-            window.location.href = "auth.html";
-          }
         });
 
         // Update user profile display
         function updateUserProfile(email, hideAvatar = false) {
-          const userEmailElement = document.getElementById('userEmail');
-          if (userEmailElement) {
-            userEmailElement.textContent = email;
-          }
-          
-          // Handle avatar display
-          const profileAvatar = document.getElementById('profileAvatar');
-          const userAvatarText = document.getElementById('userAvatarText');
-          const userAvatarTextLarge = document.getElementById('userAvatarTextLarge');
-          
-          if (hideAvatar) {
-            // Hide avatar for skip auth users
-            if (profileAvatar) {
-              profileAvatar.style.display = 'none';
+            const userEmailElement = document.getElementById('userEmail');
+            if (userEmailElement) {
+                userEmailElement.textContent = email;
             }
-          } else {
-            // Show avatar for normal users
-            if (profileAvatar) {
-              profileAvatar.style.display = 'flex';
+
+            // Handle avatar display
+            const profileAvatar = document.getElementById('profileAvatar');
+            const userAvatarText = document.getElementById('userAvatarText');
+            const userAvatarTextLarge = document.getElementById('userAvatarTextLarge');
+
+            if (hideAvatar) {
+                // Hide avatar for skip auth users
+                if (profileAvatar) {
+                    profileAvatar.style.display = 'none';
+                }
+            } else {
+                // Show avatar for normal users
+                if (profileAvatar) {
+                    profileAvatar.style.display = 'flex';
+                }
+
+                // Get first letter of email/username
+                const firstLetter = email.charAt(0).toUpperCase() || 'U';
+
+                // Update avatar text elements
+                if (userAvatarText) {
+                    userAvatarText.textContent = firstLetter;
+                }
+                if (userAvatarTextLarge) {
+                    userAvatarTextLarge.textContent = firstLetter;
+                }
             }
-            
-            // Get first letter of email/username
-            const firstLetter = email.charAt(0).toUpperCase() || 'U';
-            
-            // Update avatar text elements
-            if (userAvatarText) {
-              userAvatarText.textContent = firstLetter;
-            }
-            if (userAvatarTextLarge) {
-              userAvatarTextLarge.textContent = firstLetter;
-            }
-          }
         }
 
         // Logout function
-        window.logout = function(){
-          // Clear skip auth state
-          localStorage.removeItem('isSkipAuthUser');
-          localStorage.removeItem('skip-auth-tasks');
-          
-          signOut(auth).then(() => {
-            window.location.href = "auth.html";
-          }).catch((error) => {
-            console.error("Logout error:", error);
-            showToast('Logout failed', 'error');
-          });
+        window.logout = function () {
+            // Clear skip auth state
+            localStorage.removeItem('isSkipAuthUser');
+            localStorage.removeItem('skip-auth-tasks');
+
+            signOut(auth).then(() => {
+                window.location.href = "auth.html";
+            }).catch((error) => {
+                console.error("Logout error:", error);
+                showToast('Logout failed', 'error');
+            });
         };
 
         // Add logout button event listeners
         document.addEventListener('DOMContentLoaded', () => {
-          // Main logout button
-          const logoutBtn = document.getElementById('logoutBtn');
-          if (logoutBtn) {
-            logoutBtn.addEventListener('click', logout);
-          }
-          
-          // Profile dropdown logout button
-          const logoutProfileBtn = document.getElementById('logoutProfileBtn');
-          if (logoutProfileBtn) {
-            logoutProfileBtn.addEventListener('click', logout);
-          }
-          
-          // Profile dropdown toggle
-          const profileAvatar = document.getElementById('profileAvatar');
-          const profileDropdown = document.getElementById('profileDropdown');
-          
-          if (profileAvatar && profileDropdown) {
-            profileAvatar.addEventListener('click', (e) => {
-              e.stopPropagation();
-              profileDropdown.classList.toggle('active');
-            });
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', () => {
-              profileDropdown.classList.remove('active');
-            });
-          }
+            // Main logout button
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', logout);
+            }
+
+            // Profile dropdown logout button
+            const logoutProfileBtn = document.getElementById('logoutProfileBtn');
+            if (logoutProfileBtn) {
+                logoutProfileBtn.addEventListener('click', logout);
+            }
+
+            // Profile dropdown toggle
+            const profileAvatar = document.getElementById('profileAvatar');
+            const profileDropdown = document.getElementById('profileDropdown');
+
+            if (profileAvatar && profileDropdown) {
+                profileAvatar.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    profileDropdown.classList.toggle('active');
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', () => {
+                    profileDropdown.classList.remove('active');
+                });
+            }
         });
     </script>
     <script src="script.js"></script>

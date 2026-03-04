@@ -169,16 +169,16 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
             return { id: newTask.id };
         }
-        
+
         // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             console.warn('No valid currentUserId found, cannot save to database');
             return null;
         }
-        
+
         // Convert dueDate to Firestore Timestamp if provided
         const dueDateTimestamp = dueDate ? new Date(dueDate) : null;
-        
+
         const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             status: status,
@@ -191,7 +191,7 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
-        
+
         // Return the document reference with the generated ID
         return docRef;
     } catch (error) {
@@ -217,15 +217,15 @@ async function updateTaskInDatabase(taskId, taskData) {
             }
             return;
         }
-        
+
         // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             console.warn('No valid currentUserId found, cannot update database');
             return;
         }
-        
+
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
-        
+
         // First check if document exists
         const taskDoc = await getDoc(taskRef);
         if (!taskDoc.exists()) {
@@ -262,13 +262,13 @@ async function deleteTaskFromDatabase(taskId) {
             localStorage.setItem('skip-auth-tasks', JSON.stringify(filteredTasks));
             return;
         }
-        
+
         // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             console.warn('No valid currentUserId found, cannot delete from database');
             return;
         }
-        
+
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
     } catch (error) {
@@ -280,18 +280,18 @@ async function loadTasksFromDatabase() {
     try {
         // Update global variables first
         updateGlobalVariables();
-        
+
         // Skip loading if we're in the middle of clear/undo operations
         if (isClearingOrUndoing) {
             return;
         }
-        
+
         // Wait a bit for Firebase auth to complete
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             setTimeout(loadTasksFromDatabase, 100);
             return;
         }
-        
+
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
             // Use localStorage for skip auth users
@@ -300,10 +300,10 @@ async function loadTasksFromDatabase() {
             renderBoard();
             return;
         }
-        
+
         // Clear existing tasks to avoid duplicates
         state.tasks = [];
-        
+
         const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
         querySnapshot.forEach((doc) => {
             const data = doc.data();
@@ -350,7 +350,7 @@ async function loadTasksFromDatabase() {
 }
 
 // Load tasks function for auth state change
-window.loadTasks = function() {
+window.loadTasks = function () {
     loadTasksFromDatabase();
 };
 
@@ -592,22 +592,22 @@ function compareTasksByDueDate(a, b, order) {
     // Handle Firestore Timestamp objects and regular dates
     const getDateValue = (date) => {
         if (!date) return new Date(0);
-        
+
         // If it's a Firestore Timestamp (has toDate method)
         if (date && typeof date.toDate === 'function') {
             return date.toDate();
         }
-        
+
         // If it's a number (milliseconds)
         if (typeof date === 'number') {
             return new Date(date);
         }
-        
+
         // If it's a string date
         if (typeof date === 'string') {
             return new Date(date);
         }
-        
+
         // Default: treat as date object
         return new Date(date);
     };
@@ -741,7 +741,7 @@ function getFileIcon(filename) {
         // Default
         'default': 'fa-file'
     };
-    
+
     return icons[ext] || icons['default'];
 }
 
@@ -757,7 +757,7 @@ function createTaskCard(task) {
         today.setHours(0, 0, 0, 0);
         const dueDate = new Date(task.dueDate);
         dueDate.setHours(0, 0, 0, 0);
-        
+
         if (dueDate < today) {
             card.classList.add('overdue');
         }
@@ -886,7 +886,7 @@ function attachDragEvents() {
         zone.addEventListener('dragover', (e) => {
             // Prevent dragover if drag operation has ended
             if (!isDragging) return;
-            
+
             e.preventDefault();
             const afterElement = getDragAfterElement(zone, e.clientY);
             const card = document.querySelector('.dragging');
@@ -921,7 +921,7 @@ function attachDragEvents() {
 function getDragAfterElement(container, y) {
     try {
         const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
-        
+
         if (draggableElements.length === 0) {
             return null;
         }
@@ -931,7 +931,7 @@ function getDragAfterElement(container, y) {
             if (!(child instanceof HTMLElement)) {
                 return closest;
             }
-            
+
             const box = child.getBoundingClientRect();
             const offset = y - box.top - box.height / 2;
 
@@ -1100,13 +1100,13 @@ function setupEventListeners() {
     async function clearBoard() {
         // Set flag to prevent reloading during clear operation
         isClearingOrUndoing = true;
-        
+
         // Store current tasks for potential undo
         const previousTasks = [...state.tasks];
 
         // Clear board
         state.tasks = [];
-        
+
         // Clear database for skip auth users
         if (currentUserId === 'skip-auth-user') {
             localStorage.removeItem('skip-auth-tasks');
@@ -1115,11 +1115,11 @@ function setupEventListeners() {
             try {
                 const batch = writeBatch(db);
                 const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
-                
+
                 querySnapshot.forEach((doc) => {
                     batch.delete(doc.ref);
                 });
-                
+
                 await batch.commit();
             } catch (error) {
                 console.error("Error clearing tasks from Firestore:", error);
@@ -1130,7 +1130,7 @@ function setupEventListeners() {
                 return;
             }
         }
-        
+
         renderBoard();
         hideClearBoardConfirmation();
 
@@ -1142,10 +1142,10 @@ function setupEventListeners() {
             async () => {
                 // Set flag to prevent reloading during undo operation
                 isClearingOrUndoing = true;
-                
+
                 // Undo clear action
                 state.tasks = previousTasks;
-                
+
                 // Restore database for skip auth users
                 if (currentUserId === 'skip-auth-user') {
                     localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
@@ -1153,7 +1153,7 @@ function setupEventListeners() {
                     // For authenticated users, restore all tasks to Firestore
                     try {
                         const batch = writeBatch(db);
-                        
+
                         previousTasks.forEach((task) => {
                             const docRef = doc(db, "users", currentUserId, "tasks", task.id);
                             batch.set(docRef, {
@@ -1169,24 +1169,24 @@ function setupEventListeners() {
                                 updatedAt: serverTimestamp()
                             });
                         });
-                        
+
                         await batch.commit();
                     } catch (error) {
                         console.error("Error restoring tasks to Firestore:", error);
                         showToast('Failed to restore tasks', 'error');
                     }
                 }
-                
+
                 renderBoard();
                 showToast('Board restored', 'success');
-                
+
                 // Clear flag after a short delay to allow undo to complete
                 setTimeout(() => {
                     isClearingOrUndoing = false;
                 }, 500);
             }
         );
-        
+
         // Clear flag after a short delay
         setTimeout(() => {
             isClearingOrUndoing = false;
@@ -1286,10 +1286,10 @@ async function handleFormSubmit(e) {
 
     // Get current subtasks from UI
     const currentSubtasks = getSubtasksFromUI();
-    
+
     // Convert dueDate to timestamp for database
     const dueDateTimestamp = dueDate ? new Date(dueDate).getTime() : null;
-    
+
     // Find existing task or create new one
     const existingTask = state.tasks.find(t => t.id === id);
     const taskData = {
@@ -1314,7 +1314,7 @@ async function handleFormSubmit(e) {
     } else {
         // Add new task
         const docRef = await saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
-        
+
         if (docRef) {
             // Update local task with the correct Firestore ID
             taskData.id = docRef.id;
@@ -1417,7 +1417,7 @@ function createSubtaskElement(subtask, index) {
     // Add event listener for checkbox changes
     const checkbox = subtaskEl.querySelector('input[type="checkbox"]');
     const deleteBtn = subtaskEl.querySelector('.delete-subtask');
-    
+
     if (checkbox) {
         checkbox.addEventListener('change', async (e) => {
             const taskId = document.getElementById('taskId')?.value;
@@ -1426,9 +1426,9 @@ function createSubtaskElement(subtask, index) {
                 if (task && task.subtasks) {
                     task.subtasks[index].completed = e.target.checked;
                     // Update in database with new subtasks array
-                    updateTaskInDatabase(taskId, { 
+                    updateTaskInDatabase(taskId, {
                         subtasks: task.subtasks,
-                        userId: currentUserId 
+                        userId: currentUserId
                     });
                     showToast(e.target.checked ? 'Subtask completed' : 'Subtask unchecked', 'success');
                 }
@@ -1444,9 +1444,9 @@ function createSubtaskElement(subtask, index) {
                 if (task && task.subtasks) {
                     task.subtasks.splice(index, 1);
                     // Update in database with new subtasks array
-                    updateTaskInDatabase(taskId, { 
+                    updateTaskInDatabase(taskId, {
                         subtasks: task.subtasks,
-                        userId: currentUserId 
+                        userId: currentUserId
                     });
                     // Re-render subtasks in modal
                     const subtasksContainer = document.getElementById('subtasksContainer');
@@ -1549,23 +1549,23 @@ async function duplicateTask(id) {
 
     // Add new task to beginning of tasks array
     state.tasks.unshift(newTask);
-    
+
     // Save to database and update with correct ID
     const docRef = await saveTaskToDatabase(
-        newTask.title, 
-        newTask.status, 
-        newTask.dueDate, 
-        newTask.description, 
-        newTask.priority, 
+        newTask.title,
+        newTask.status,
+        newTask.dueDate,
+        newTask.description,
+        newTask.priority,
         newTask.subtasks || []
     );
-    
+
     if (docRef) {
         // Update local task with the correct Firestore ID
         newTask.id = docRef.id;
         newTask.createdAt = Date.now(); // Temporary until next refresh
     }
-    
+
     renderBoard();
 
     // Show success toast
@@ -1580,10 +1580,10 @@ function deleteTask(id) {
 
     // Remove task from local state
     state.tasks = state.tasks.filter(task => task.id !== id);
-    
+
     // Delete from database
     deleteTaskFromDatabase(id);
-    
+
     renderBoard();
     hideDeleteConfirmation();
 
@@ -1597,18 +1597,18 @@ function deleteTask(id) {
             if (state.lastDeletedTask) {
                 // Remove the deletedAt property before adding back
                 const { deletedAt, ...task } = state.lastDeletedTask;
-                
+
                 try {
                     // Restore to database first
                     const docRef = await saveTaskToDatabase(
                         task.title,
-                        task.status, 
+                        task.status,
                         task.dueDate,
                         task.description,
                         task.priority,
                         task.subtasks || []
                     );
-                    
+
                     if (docRef) {
                         // Update local task with the correct Firestore ID
                         task.id = docRef.id;
@@ -1702,7 +1702,7 @@ function handleKeyboardShortcuts(e) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize the application first
     init();
-    
+
     // Set up delete confirmation
     const confirmDeleteBtn = document.getElementById('confirmDelete');
     if (confirmDeleteBtn) {
