@@ -242,6 +242,31 @@
     <div id="toastContainer" class="toast-container">
     </div>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } 
+        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+          apiKey: "YOUR_KEY",
+          authDomain: "student-dashboard-2c69c.firebaseapp.com",
+          projectId: "student-dashboard-2c69c",
+          storageBucket: "student-dashboard-2c69c.appspot.com",
+          messagingSenderId: "460268749441",
+          appId: "1:460268749441:web:67baf73c70f34bd9130380"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            console.log("Logged in user:", user.uid);
+          } else {
+            window.location.href = "auth.html";
+          }
+        });
+    </script>
     <script type="module" src="firebase-config.js"></script>
     <script src="script.js"></script>
 </body>
