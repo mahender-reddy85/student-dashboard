@@ -573,7 +573,7 @@
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         alert("Account created!");
-        window.location.href = "index.html";
+        window.location.href = "index.html?from=auth";
       } catch (error) {
         alert(error.message);
       }
@@ -586,7 +586,7 @@
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         alert("Login successful!");
-        window.location.href = "index.html";
+        window.location.href = "index.html?from=auth";
       } catch (error) {
         alert(error.message);
       }
@@ -596,7 +596,7 @@
       try {
         const result = await signInWithPopup(auth, provider);
         alert("Google sign-in successful!");
-        window.location.href = "index.html";
+        window.location.href = "index.html?from=auth";
       } catch (error) {
         alert(error.message);
       }

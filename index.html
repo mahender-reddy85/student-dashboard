@@ -32,6 +32,24 @@
         </div>
 
         <div class="nav-actions">
+            <div class="user-profile" id="userProfile">
+                <div class="profile-icon" id="profileIcon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="profile-info">
+                        <span class="user-email" id="userEmail">Loading...</span>
+                        <span class="user-status">Online</span>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="profile-btn" id="logoutProfileBtn">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="filters">
                 <div class="search-container">
                     <i class="fas fa-search"></i>
@@ -276,15 +294,33 @@
             // Clear the flag after using it
             localStorage.removeItem('skipAuth');
             window.currentUserId = 'skip-auth-user';
+            updateUserProfile('Skip Auth User');
             loadTasks();
           } else if (user) {
             console.log("Logged in user:", user.uid);
             window.currentUserId = user.uid;
+            updateUserProfile(user.email || 'Anonymous User');
             loadTasks();
+            
+            // Auto-redirect check - if coming from auth page, show success message
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('from') === 'auth') {
+              showToast('Successfully logged in!', 'success');
+              // Clean up URL
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
           } else {
             window.location.href = "auth.html";
           }
         });
+
+        // Update user profile display
+        function updateUserProfile(email) {
+          const userEmailElement = document.getElementById('userEmail');
+          if (userEmailElement) {
+            userEmailElement.textContent = email;
+          }
+        }
 
         // Logout function
         window.logout = function(){
@@ -292,11 +328,40 @@
             window.location.href = "auth.html";
           }).catch((error) => {
             console.error("Logout error:", error);
+            showToast('Logout failed', 'error');
           });
         };
 
-        // Add logout button event listener
-        document.getElementById('logoutBtn').addEventListener('click', logout);
+        // Add logout button event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+          // Main logout button
+          const logoutBtn = document.getElementById('logoutBtn');
+          if (logoutBtn) {
+            logoutBtn.addEventListener('click', logout);
+          }
+          
+          // Profile dropdown logout button
+          const logoutProfileBtn = document.getElementById('logoutProfileBtn');
+          if (logoutProfileBtn) {
+            logoutProfileBtn.addEventListener('click', logout);
+          }
+          
+          // Profile dropdown toggle
+          const profileIcon = document.getElementById('profileIcon');
+          const profileDropdown = document.getElementById('profileDropdown');
+          
+          if (profileIcon && profileDropdown) {
+            profileIcon.addEventListener('click', (e) => {
+              e.stopPropagation();
+              profileDropdown.classList.toggle('active');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+              profileDropdown.classList.remove('active');
+            });
+          }
+        });
     </script>
     <script type="module" src="firebase-config.js"></script>
     <script src="script.js"></script>
