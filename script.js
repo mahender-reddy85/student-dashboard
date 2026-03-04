@@ -276,12 +276,9 @@ async function loadTasksFromDatabase() {
         
         // Wait a bit for Firebase auth to complete
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
-            console.warn('currentUserId not yet available, retrying in 100ms...');
             setTimeout(loadTasksFromDatabase, 100);
             return;
         }
-        
-        console.log('Loading tasks for currentUserId:', currentUserId);
         
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
@@ -1091,22 +1088,16 @@ function setupEventListeners() {
     }
 
     async function clearBoard() {
-        console.log('Clear board called, currentUserId:', currentUserId);
-        
-        // Store the current tasks for potential undo
+        // Store current tasks for potential undo
         const previousTasks = [...state.tasks];
-        console.log('Previous tasks stored:', previousTasks.length);
 
-        // Clear the board
+        // Clear board
         state.tasks = [];
         
         // Clear database for skip auth users
         if (currentUserId === 'skip-auth-user') {
-            console.log('Clearing localStorage for skip auth user');
             localStorage.removeItem('skip-auth-tasks');
-            console.log('localStorage cleared');
         } else {
-            console.log('User is not skip auth, currentUserId:', currentUserId);
             // For authenticated users, we would need to delete all tasks from Firestore
             // This is more complex and requires batched deletes
             // For now, we'll just clear local state
@@ -1121,13 +1112,11 @@ function setupEventListeners() {
             'error',
             5000,
             async () => {
-                console.log('Undo clear board called');
                 // Undo clear action
                 state.tasks = previousTasks;
                 
                 // Restore database for skip auth users
                 if (currentUserId === 'skip-auth-user') {
-                    console.log('Restoring tasks to localStorage');
                     localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
                 }
                 
