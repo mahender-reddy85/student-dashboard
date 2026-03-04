@@ -122,7 +122,7 @@ function hideToast(toastElement) {
 // Firebase Functions
 async function saveTaskToFirebase(title, status, dueDate, description = '', priority = 'medium') {
     try {
-        await addDoc(collection(db, "tasks"), {
+        await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             status: status,
             dueDate: dueDate || "",
@@ -137,7 +137,7 @@ async function saveTaskToFirebase(title, status, dueDate, description = '', prio
 
 async function updateTaskInFirebase(taskId, taskData) {
     try {
-        const taskRef = doc(db, "tasks", taskId);
+        const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await updateDoc(taskRef, taskData);
     } catch (error) {
         console.error("Firebase update error:", error);
@@ -146,7 +146,7 @@ async function updateTaskInFirebase(taskId, taskData) {
 
 async function deleteTaskFromFirebase(taskId) {
     try {
-        const taskRef = doc(db, "tasks", taskId);
+        const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
     } catch (error) {
         console.error("Firebase delete error:", error);
@@ -158,7 +158,7 @@ async function loadTasksFromFirebase() {
         // Clear local state first to prevent duplicates
         state.tasks = [];
         
-        const querySnapshot = await getDocs(collection(db, "tasks"));
+        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
@@ -183,11 +183,16 @@ async function loadTasksFromFirebase() {
 
         // Render board with loaded tasks
         renderBoard();
-        console.log("Tasks loaded from Firebase");
+        console.log("Tasks loaded from Firebase for user:", currentUserId);
     } catch (error) {
         console.error("Firebase load error:", error);
     }
 }
+
+// Load tasks function for auth state change
+window.loadTasks = function() {
+    loadTasksFromFirebase();
+};
 
 // DOM Elements
 const DOM = {
@@ -226,8 +231,7 @@ function init() {
         // Show welcome message
         showToast('Welcome to YoursKanban!', 'success');
 
-        // Load tasks from Firebase after initialization
-        loadTasksFromFirebase();
+        // Note: Tasks will be loaded by auth state change in index.html
     } catch (error) {
         console.error('Initialization error:', error);
         showToast('Failed to initialize the application', 'error');

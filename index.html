@@ -276,9 +276,11 @@
             // Clear the flag after using it
             localStorage.removeItem('skipAuth');
             window.currentUserId = 'skip-auth-user';
+            loadTasks();
           } else if (user) {
             console.log("Logged in user:", user.uid);
             window.currentUserId = user.uid;
+            loadTasks();
           } else {
             window.location.href = "auth.html";
           }
