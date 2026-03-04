@@ -334,12 +334,19 @@
         const storage = getStorage(app);
 
         onAuthStateChanged(auth, (user) => {
-          // Check if user has skipped authentication
+          // Check if user has skipped authentication or is a returning skip auth user
           const skipAuth = localStorage.getItem('skipAuth');
+          const isSkipAuthUser = localStorage.getItem('isSkipAuthUser');
           
           if (skipAuth === 'true') {
-            // Clear the flag after using it
+            // Clear the one-time flag after using it
             localStorage.removeItem('skipAuth');
+            localStorage.setItem('isSkipAuthUser', 'true');
+            window.currentUserId = 'skip-auth-user';
+            updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
+            loadTasks();
+          } else if (isSkipAuthUser === 'true') {
+            // Returning skip auth user
             window.currentUserId = 'skip-auth-user';
             updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
             loadTasks();
@@ -399,6 +406,10 @@
 
         // Logout function
         window.logout = function(){
+          // Clear skip auth state
+          localStorage.removeItem('isSkipAuthUser');
+          localStorage.removeItem('skip-auth-tasks');
+          
           signOut(auth).then(() => {
             window.location.href = "auth.html";
           }).catch((error) => {
