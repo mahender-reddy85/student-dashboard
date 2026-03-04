@@ -120,7 +120,7 @@ function hideToast(toastElement) {
 }
 
 // Firebase Functions
-async function saveTaskToFirebase(title, status, dueDate, description = '', priority = 'medium') {
+async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium') {
     try {
         await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
@@ -131,29 +131,29 @@ async function saveTaskToFirebase(title, status, dueDate, description = '', prio
             createdAt: new Date()
         });
     } catch (error) {
-        console.error("Firebase save error:", error);
+        console.error("Database save error:", error);
     }
 }
 
-async function updateTaskInFirebase(taskId, taskData) {
+async function updateTaskInDatabase(taskId, taskData) {
     try {
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await updateDoc(taskRef, taskData);
     } catch (error) {
-        console.error("Firebase update error:", error);
+        console.error("Database update error:", error);
     }
 }
 
-async function deleteTaskFromFirebase(taskId) {
+async function deleteTaskFromDatabase(taskId) {
     try {
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
     } catch (error) {
-        console.error("Firebase delete error:", error);
+        console.error("Database delete error:", error);
     }
 }
 
-async function loadTasksFromFirebase() {
+async function loadTasksFromDatabase() {
     try {
         // Clear local state first to prevent duplicates
         state.tasks = [];
@@ -183,15 +183,14 @@ async function loadTasksFromFirebase() {
 
         // Render board with loaded tasks
         renderBoard();
-        console.log("Tasks loaded from Firebase for user:", currentUserId);
     } catch (error) {
-        console.error("Firebase load error:", error);
+        console.error("Database load error:", error);
     }
 }
 
 // Load tasks function for auth state change
 window.loadTasks = function() {
-    loadTasksFromFirebase();
+    loadTasksFromDatabase();
 };
 
 // DOM Elements
@@ -218,7 +217,7 @@ function init() {
         // Initialize theme manager first
         ThemeManager.init();
 
-        // Clear local state to load fresh from Firebase
+        // Clear local state to load fresh from database
         state.tasks = [];
 
         // Initialize the rest of the application
@@ -247,7 +246,7 @@ function saveState() {
         //     lastDeletedTask: state.lastDeletedTask
         // };
         // localStorage.setItem('kanbanflow_state', JSON.stringify(stateToSave));
-        console.log('State save skipped - using Firebase');
+        console.log('State save skipped - using database');
     } catch (error) {
         console.error('Failed to save state:', error);
         showToast('Failed to save board state', 'error');
@@ -264,7 +263,7 @@ function loadState() {
         //     state.tasks = parsedState.tasks || [];
         //     state.lastDeletedTask = parsedState.lastDeletedTask || null;
         // }
-        console.log('State load skipped - using Firebase');
+        console.log('State load skipped - using database');
     } catch (error) {
         console.error('Failed to load state:', error);
         showToast('Failed to load board state', 'error');
@@ -343,11 +342,8 @@ const ThemeManager = (() => {
      * Toggle between light and dark themes
      */
     function toggleTheme() {
-        console.log('toggleTheme called');
         const currentTheme = document.documentElement.getAttribute(THEME_ATTR);
-        console.log('Current theme:', currentTheme);
         const newTheme = currentTheme === THEMES.LIGHT ? THEMES.DARK : THEMES.LIGHT;
-        console.log('New theme:', newTheme);
         setTheme(newTheme, true);
     }
 
@@ -357,29 +353,24 @@ const ThemeManager = (() => {
      * @param {boolean} savePreference - Whether to save the preference
      */
     function setTheme(theme, savePreference = true) {
-        console.log('setTheme called with:', { theme, savePreference });
 
         if (!Object.values(THEMES).includes(theme)) {
             console.warn(`Invalid theme: ${theme}. Defaulting to light.`);
-            theme = THEMES.LIGHT;
         }
 
         // Update the DOM
-        console.log('Setting theme attribute to:', theme);
         document.documentElement.setAttribute(THEME_ATTR, theme);
 
         // Save preference if requested
         if (savePreference) {
             try {
                 localStorage.setItem(STORAGE_KEY, theme);
-                console.log('Theme preference saved to localStorage:', theme);
             } catch (error) {
                 console.error('Failed to save theme preference:', error);
             }
         }
 
         // Update UI
-        console.log('Updating UI for theme:', theme);
         updateThemeUI(theme);
     }
 
@@ -753,7 +744,7 @@ function updateTaskStatus(id, status) {
     if (task) {
         task.status = status;
         // Update in Firebase
-        updateTaskInFirebase(id, { status: status });
+        updateTaskInDatabase(id, { status: status });
         renderBoard();
     }
 }
@@ -788,7 +779,7 @@ function handleFileDrop(e) {
                     url: file.type.startsWith('image/') ? URL.createObjectURL(file) : '#'
                 });
             });
-            // saveState(); // DISABLED - Using Firebase
+            // saveState(); // DISABLED - Using database
             renderBoard();
         } else {
             // If no task is being edited, create a new task with the files
@@ -809,7 +800,7 @@ function handleFileDrop(e) {
             };
 
             state.tasks.push(newTask);
-            // saveState(); // DISABLED - Using Firebase
+            // saveState(); // DISABLED - Using database
             renderBoard();
         }
     }
@@ -934,7 +925,7 @@ function setupEventListeners() {
 
         // Clear the board
         state.tasks = [];
-        // saveState(); // DISABLED - Using Firebase
+        // saveState(); // DISABLED - Using database
         renderBoard();
         hideClearBoardConfirmation();
 
@@ -946,7 +937,7 @@ function setupEventListeners() {
             () => {
                 // Undo clear action
                 state.tasks = previousTasks;
-                // saveState(); // DISABLED - Using Firebase
+                // saveState(); // DISABLED - Using database
                 renderBoard();
                 showToast('Board restored', 'success');
             }
@@ -1070,11 +1061,11 @@ function handleFormSubmit(e) {
         state.tasks.push(taskData);
         showToast('Task created', 'success');
         
-        // Save to Firebase
-        saveTaskToFirebase(title, status, dueDate, description, priority);
+        // Save to database
+        saveTaskToDatabase(title, status, dueDate, description, priority);
     }
 
-    // saveState(); // DISABLED - Using Firebase
+    // saveState(); // DISABLED - Using database
     renderBoard();
     closeModal();
 }
@@ -1115,8 +1106,8 @@ function setupInlineEditing(card, task) {
         if (newTitle && newTitle !== task.title) {
             task.title = newTitle;
             titleText.textContent = newTitle || '/';
-            // Update in Firebase
-            updateTaskInFirebase(task.id, { title: newTitle });
+            // Update in database
+            updateTaskInDatabase(task.id, { title: newTitle });
             showToast('Task updated', 'success');
         }
 
@@ -1217,8 +1208,8 @@ function togglePin(id) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
         task.pinned = !task.pinned;
-        // Update in Firebase
-        updateTaskInFirebase(id, { pinned: task.pinned });
+        // Update in database
+        updateTaskInDatabase(id, { pinned: task.pinned });
         renderBoard();
         showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
     }
@@ -1244,8 +1235,8 @@ function duplicateTask(id) {
     // Add new task to beginning of tasks array
     state.tasks.unshift(newTask);
     
-    // Save to Firebase
-    saveTaskToFirebase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority);
+    // Save to database
+    saveTaskToDatabase(newTask.title, newTask.status, newTask.dueDate, newTask.description, newTask.priority);
     
     renderBoard();
 
@@ -1262,8 +1253,8 @@ function deleteTask(id) {
     // Remove task from local state
     state.tasks = state.tasks.filter(task => task.id !== id);
     
-    // Delete from Firebase
-    deleteTaskFromFirebase(id);
+    // Delete from database
+    deleteTaskFromDatabase(id);
     
     renderBoard();
     hideDeleteConfirmation();
@@ -1279,7 +1270,7 @@ function deleteTask(id) {
                 // Remove the deletedAt property before adding back
                 const { deletedAt, ...task } = state.lastDeletedTask;
                 state.tasks.push(task);
-                // saveState(); // DISABLED - Using Firebase
+                // saveState(); // DISABLED - Using database
                 renderBoard();
                 showToast('Task restored', 'success');
                 state.lastDeletedTask = null;
