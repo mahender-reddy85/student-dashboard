@@ -291,10 +291,20 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    height: 600px; /* Constant height for all columns */
-    max-height: 600px; /* Ensure maximum height */
+    min-height: 200px; /* Minimum height when empty */
+    max-height: 600px; /* Maximum height when full */
     border: 1px solid var(--border-color);
     transition: all 0.2s ease;
+}
+
+/* When column has tasks, allow it to grow to full height */
+.column:not(:has(.task-card)) {
+    height: auto;
+    min-height: 150px;
+}
+
+.column:has(.task-card) {
+    height: 600px;
 }
 
 .column:hover {
@@ -477,9 +487,15 @@ body {
         margin-top: 1rem;
     }
 
-    .column {
-        height: 500px; /* Slightly shorter on mobile */
+    .column:has(.task-card) {
+        height: 500px; /* Full height when has tasks */
         max-height: 500px;
+        padding: 0.75rem;
+    }
+
+    .column:not(:has(.task-card)) {
+        height: auto;
+        min-height: 120px; /* Smaller when empty on mobile */
         padding: 0.75rem;
     }
 
@@ -526,9 +542,15 @@ body {
 
 /* Extra small screens */
 @media (max-width: 480px) {
-    .column {
+    .column:has(.task-card) {
         height: 450px;
         max-height: 450px;
+        padding: 0.5rem;
+    }
+
+    .column:not(:has(.task-card)) {
+        height: auto;
+        min-height: 100px; /* Even smaller on very small screens */
         padding: 0.5rem;
     }
 
