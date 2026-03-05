@@ -12,6 +12,7 @@
 let currentUserId = window.currentUserId || null;
 let db = window.db || null;
 let writeBatch = window.writeBatch || null;
+let Timestamp = window.Timestamp || null;
 
 // Flag to prevent reloading during clear/undo operations
 let isClearingOrUndoing = false;
@@ -26,6 +27,9 @@ function updateGlobalVariables() {
     }
     if (window.writeBatch !== undefined) {
         writeBatch = window.writeBatch;
+    }
+    if (window.Timestamp !== undefined) {
+        Timestamp = window.Timestamp;
     }
 }
 
@@ -178,7 +182,7 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         }
 
         // Convert dueDate to Firestore Timestamp if provided
-        const dueDateTimestamp = dueDate ? new Date(dueDate) : null;
+        const dueDateTimestamp = dueDate ? Timestamp.fromDate(new Date(dueDate)) : null;
 
         const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
@@ -226,6 +230,12 @@ async function updateTaskInDatabase(taskId, taskData) {
             return;
         }
 
+        // Convert dueDate to Firestore Timestamp if provided
+        const updateData = { ...taskData };
+        if (updateData.dueDate) {
+            updateData.dueDate = Timestamp.fromDate(new Date(updateData.dueDate));
+        }
+
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
 
         // First check if document exists
@@ -234,17 +244,17 @@ async function updateTaskInDatabase(taskId, taskData) {
             console.warn(`Task ${taskId} not found in database, creating new document`);
             // If document doesn't exist, create it instead
             await setDoc(taskRef, {
-                ...taskData,
+                ...updateData,
                 id: taskId,
                 userId: currentUserId,
-                pinned: taskData.pinned || false,
+                pinned: updateData.pinned || false,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             });
         } else {
             // Document exists, update it
             await updateDoc(taskRef, {
-                ...taskData,
+                ...updateData,
                 updatedAt: serverTimestamp()
             });
         }
