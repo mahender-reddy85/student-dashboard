@@ -291,20 +291,20 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    min-height: 200px; /* Minimum height when empty */
-    max-height: 600px; /* Maximum height when full */
+    min-height: 150px; /* Minimum height for all columns */
+    max-height: 600px; /* Maximum height when very full */
     border: 1px solid var(--border-color);
     transition: all 0.2s ease;
+    height: auto; /* Always auto height based on content */
 }
 
-/* When column has tasks, allow it to grow to full height */
+/* All columns should adapt to their content */
 .column:not(:has(.task-card)) {
-    height: auto;
-    min-height: 150px;
+    min-height: 120px; /* Even smaller when completely empty */
 }
 
 .column:has(.task-card) {
-    height: 600px;
+    min-height: 200px; /* Slightly taller when has tasks */
 }
 
 .column:hover {
@@ -487,16 +487,18 @@ body {
         margin-top: 1rem;
     }
 
-    .column:has(.task-card) {
-        height: 500px; /* Full height when has tasks */
-        max-height: 500px;
+    .column {
+        height: auto; /* Always adaptive */
         padding: 0.75rem;
     }
 
+    .column:has(.task-card) {
+        min-height: 180px; /* Slightly taller when has tasks on mobile */
+        max-height: 500px; /* Still cap maximum height */
+    }
+
     .column:not(:has(.task-card)) {
-        height: auto;
-        min-height: 120px; /* Smaller when empty on mobile */
-        padding: 0.75rem;
+        min-height: 100px; /* Smaller when empty on mobile */
     }
 
     .task-list {
@@ -542,16 +544,18 @@ body {
 
 /* Extra small screens */
 @media (max-width: 480px) {
-    .column:has(.task-card) {
-        height: 450px;
-        max-height: 450px;
+    .column {
+        height: auto; /* Always adaptive */
         padding: 0.5rem;
     }
 
+    .column:has(.task-card) {
+        min-height: 160px; /* Minimum when has tasks on very small screens */
+        max-height: 450px; /* Cap maximum height */
+    }
+
     .column:not(:has(.task-card)) {
-        height: auto;
-        min-height: 100px; /* Even smaller on very small screens */
-        padding: 0.5rem;
+        min-height: 80px; /* Even smaller when empty on very small screens */
     }
 
     .task-list {
