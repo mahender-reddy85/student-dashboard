@@ -592,12 +592,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Theme management is now handled by the ThemeManager module
-function applyTheme() {
-    // This is a compatibility function for existing code
-    ThemeManager.setTheme(ThemeManager.getCurrentTheme(), false);
-}
-
 // --- UI Rendering ---
 function compareTasksByDueDate(a, b, order) {
     if (order === 'none') return 0;

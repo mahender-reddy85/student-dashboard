@@ -906,10 +906,6 @@
       window.serverTimestamp = serverTimestamp;
       window.writeBatch = writeBatch;
       window.Timestamp = Timestamp;
-      window.getStorage = getStorage;
-      window.ref = ref;
-      window.uploadBytes = uploadBytes;
-      window.getDownloadURL = getDownloadURL;
 
       // Auth imports for user management
       import { getAuth, onAuthStateChanged, signOut }
@@ -919,6 +915,12 @@
 
       const auth = getAuth(app);
       const storage = getStorage(app);
+
+      // Make storage functions globally available
+      window.getStorage = getStorage;
+      window.ref = ref;
+      window.uploadBytes = uploadBytes;
+      window.getDownloadURL = getDownloadURL;
 
       // Auth functions
       import {
