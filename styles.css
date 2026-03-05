@@ -90,6 +90,16 @@ body {
     overflow-x: hidden;
 }
 
+/* Loading indicator for better perceived performance */
+body:not(.loaded) {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+body.loaded {
+    opacity: 1;
+}
+
 /* Books Background Watermark */
 body::before {
     content: '';
