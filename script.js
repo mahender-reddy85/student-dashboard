@@ -670,7 +670,7 @@ function renderBoard() {
             const aOrder = a.order !== undefined ? a.order : 999;
             const bOrder = b.order !== undefined ? b.order : 999;
             if (aOrder !== bOrder) return aOrder - bOrder;
-            
+
             // Pinned tasks first
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
@@ -960,7 +960,7 @@ function updateTaskStatus(id, status) {
     if (task) {
         const oldStatus = task.status;
         task.status = status;
-        
+
         // If moving to a different column, update order
         if (oldStatus !== status) {
             // Get all tasks in the new column and update their order
@@ -981,23 +981,23 @@ function updateTaskStatus(id, status) {
                 });
             }
         }
-        
+
         // Update in database with status and order
-        updateTaskInDatabase(id, { 
-            status: status, 
+        updateTaskInDatabase(id, {
+            status: status,
             order: task.order,
-            userId: currentUserId 
+            userId: currentUserId
         });
-        
+
         // Update all tasks in the column to maintain order
         const columnTasks = state.tasks.filter(t => t.status === status);
         columnTasks.forEach(columnTask => {
-            updateTaskInDatabase(columnTask.id, { 
+            updateTaskInDatabase(columnTask.id, {
                 order: columnTask.order,
-                userId: currentUserId 
+                userId: currentUserId
             });
         });
-        
+
         renderBoard();
     }
 }
