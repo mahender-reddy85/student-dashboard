@@ -158,17 +158,17 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             const newTask = {
                 id: Date.now().toString(),
-                title,
-                status,
-                dueDate,
-                description,
-                priority,
-                subtasks,
+                title: title,
+                description: description,
+                status: status,
+                priority: priority,
                 pinned: false,
-                userId: currentUserId,
+                order: 0,
+                dueDate: dueDate,
                 createdAt: new Date().getTime(),
                 updatedAt: new Date().getTime(),
-                order: 0
+                userId: currentUserId,
+                subtasks: subtasks
             };
             tasks.push(newTask);
             localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
@@ -186,16 +186,16 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
 
         const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
-            status: status,
-            dueDate: dueDateTimestamp,
             description: description,
+            status: status,
             priority: priority,
             pinned: false,
-            userId: currentUserId,
-            subtasks: subtasks,
             order: 0,
+            dueDate: dueDateTimestamp,
             createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+            updatedAt: serverTimestamp(),
+            userId: currentUserId,
+            subtasks: subtasks
         });
 
         // Return the document reference with the generated ID
@@ -244,12 +244,17 @@ async function updateTaskInDatabase(taskId, taskData) {
             console.warn(`Task ${taskId} not found in database, creating new document`);
             // If document doesn't exist, create it instead
             await setDoc(taskRef, {
-                ...updateData,
-                id: taskId,
-                userId: currentUserId,
+                title: updateData.title || '',
+                description: updateData.description || null,
+                status: updateData.status || 'todo',
+                priority: updateData.priority || 'medium',
                 pinned: updateData.pinned || false,
+                order: updateData.order || 0,
+                dueDate: updateData.dueDate || null,
                 createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                userId: currentUserId,
+                subtasks: updateData.subtasks || []
             });
         } else {
             // Document exists, update it
