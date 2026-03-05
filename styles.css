@@ -280,6 +280,7 @@ body {
     gap: 1.5rem;
     margin-top: 1.5rem;
     width: 100%;
+    align-items: start;
 }
 
 /* Column */
@@ -485,6 +486,7 @@ body {
         grid-template-columns: 1fr;
         gap: 1rem;
         margin-top: 1rem;
+        align-items: start; /* Ensure mobile also respects independent heights */
     }
 
     .column {
@@ -544,6 +546,10 @@ body {
 
 /* Extra small screens */
 @media (max-width: 480px) {
+    .board {
+        align-items: start; /* Ensure very small screens also respect independent heights */
+    }
+
     .column {
         height: auto; /* Always adaptive */
         padding: 0.5rem;
