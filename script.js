@@ -163,7 +163,8 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
                 pinned: false,
                 userId: currentUserId,
                 createdAt: new Date().getTime(),
-                updatedAt: new Date().getTime()
+                updatedAt: new Date().getTime(),
+                order: 0
             };
             tasks.push(newTask);
             localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
@@ -188,6 +189,7 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             pinned: false,
             userId: currentUserId,
             subtasks: subtasks,
+            order: 0,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
@@ -335,7 +337,8 @@ async function loadTasksFromDatabase() {
                 priority: data.priority || 'medium',
                 pinned: data.pinned || false,
                 userId: data.userId || currentUserId,
-                subtasks: data.subtasks || []
+                subtasks: data.subtasks || [],
+                order: data.order || 0
             };
 
             // Add to state
@@ -661,8 +664,13 @@ function renderBoard() {
             return matchesSearch && matchesPriority;
         });
 
-        // Apply sorting - pinned tasks first, then by due date if enabled
+        // Apply sorting - order first, then pinned tasks, then by due date if enabled
         columnTasks.sort((a, b) => {
+            // First, sort by order (if available)
+            const aOrder = a.order !== undefined ? a.order : 999;
+            const bOrder = b.order !== undefined ? b.order : 999;
+            if (aOrder !== bOrder) return aOrder - bOrder;
+            
             // Pinned tasks first
             if (a.pinned && !b.pinned) return -1;
             if (!a.pinned && b.pinned) return 1;
@@ -950,9 +958,46 @@ function getDragAfterElement(container, y) {
 function updateTaskStatus(id, status) {
     const task = state.tasks.find(t => t.id === id);
     if (task) {
+        const oldStatus = task.status;
         task.status = status;
-        // Update in database
-        updateTaskInDatabase(id, { status: status, userId: currentUserId });
+        
+        // If moving to a different column, update order
+        if (oldStatus !== status) {
+            // Get all tasks in the new column and update their order
+            const columnTasks = state.tasks.filter(t => t.status === status);
+            columnTasks.forEach((columnTask, index) => {
+                columnTask.order = index;
+            });
+        } else {
+            // Reordering within the same column - get the actual DOM order
+            const taskList = document.querySelector(`.task-list[data-status="${status}"]`);
+            if (taskList) {
+                const cards = taskList.querySelectorAll('.task-card');
+                cards.forEach((card, index) => {
+                    const cardTask = state.tasks.find(t => t.id === card.dataset.id);
+                    if (cardTask) {
+                        cardTask.order = index;
+                    }
+                });
+            }
+        }
+        
+        // Update in database with status and order
+        updateTaskInDatabase(id, { 
+            status: status, 
+            order: task.order,
+            userId: currentUserId 
+        });
+        
+        // Update all tasks in the column to maintain order
+        const columnTasks = state.tasks.filter(t => t.status === status);
+        columnTasks.forEach(columnTask => {
+            updateTaskInDatabase(columnTask.id, { 
+                order: columnTask.order,
+                userId: currentUserId 
+            });
+        });
+        
         renderBoard();
     }
 }

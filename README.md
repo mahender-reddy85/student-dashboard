@@ -28,7 +28,7 @@ A modern Kanban board application with Firebase backend for task management.
 1. **Firebase Setup**:
    - Create a Firebase project at https://console.firebase.google.com
    - Copy your Firebase configuration
-   - Update `firebase-config.js` with your credentials:
+   - Update the `firebaseConfig` object in `index.html` (lines 849-858) with your credentials:
      ```javascript
      const firebaseConfig = {
          apiKey: "YOUR_API_KEY",
@@ -36,7 +36,8 @@ A modern Kanban board application with Firebase backend for task management.
          projectId: "YOUR_PROJECT_ID",
          storageBucket: "YOUR_STORAGE_BUCKET",
          messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-         appId: "YOUR_APP_ID"
+         appId: "YOUR_APP_ID",
+         measurementId: "YOUR_MEASUREMENT_ID"
      };
      ```
 
@@ -48,13 +49,14 @@ A modern Kanban board application with Firebase backend for task management.
 
 ```
 buildathon/
-├── index.html          # Main application file
+├── index.html          # Main application file with embedded auth
 ├── styles.css           # Complete CSS styling
-├── firebase-config.js   # Firebase configuration
 ├── script.js            # Main application logic
-├── auth.html            # Authentication page
+├── package.json         # Node.js package configuration
+├── serviceAccountKey.json # Firebase service account key (private)
 ├── README.md            # Documentation
-└── favicon.jpg         # Application icon
+├── .gitignore           # Git ignore rules
+└── favicon.png          # Application icon
 ```
 
 ## Usage
