@@ -971,12 +971,9 @@
       }, true);
     </script>
 
-    <script>
-      // Firebase configuration is loaded from firebase-config.js
-    </script>
-    <script>
+    <script type="module" defer>
       // Import Firebase config
-      import './firebase-config.js';
+      import firebaseConfig from './firebase-config.js';
       // Firebase Configuration and Initialization - Deferred loading
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
       import {
