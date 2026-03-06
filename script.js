@@ -661,6 +661,8 @@ function toggleSortOrder() {
 
 // --- Drag and Drop ---
 let isDragging = false;
+let draggedElement = null;
+let dragStartColumn = null;
 
 function attachDragEvents() {
     const cards = document.querySelectorAll('.task-card');
@@ -669,15 +671,33 @@ function attachDragEvents() {
     cards.forEach(card => {
         card.addEventListener('dragstart', (e) => {
             isDragging = true;
+            draggedElement = card;
+            dragStartColumn = card.closest('.task-list').dataset.status;
+            
+            e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', card.dataset.id);
+            
+            // Add visual feedback
             setTimeout(() => {
                 card.classList.add('dragging');
+                // Highlight all drop zones
+                dropzones.forEach(zone => {
+                    zone.classList.add('drop-zone-active');
+                });
             }, 0);
         });
 
-        card.addEventListener('dragend', () => {
+        card.addEventListener('dragend', (e) => {
             isDragging = false;
+            draggedElement = null;
+            dragStartColumn = null;
+            
+            // Remove visual feedback
             card.classList.remove('dragging');
+            dropzones.forEach(zone => {
+                zone.classList.remove('drop-zone-active');
+            });
+            
             // Add small delay to prevent race condition with drag operations
             setTimeout(() => {
                 renderBoard(); // Cleanup and persist
@@ -691,6 +711,8 @@ function attachDragEvents() {
             if (!isDragging) return;
 
             e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
             const afterElement = getDragAfterElement(zone, e.clientY);
             const card = document.querySelector('.dragging');
 
@@ -712,6 +734,18 @@ function attachDragEvents() {
             }
         });
 
+        zone.addEventListener('dragleave', (e) => {
+            // Only remove highlight if leaving the zone entirely
+            if (!zone.contains(e.relatedTarget)) {
+                zone.classList.remove('drag-over');
+            }
+        });
+
+        zone.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+
         zone.addEventListener('drop', (e) => {
             e.preventDefault();
             if (!isDragging) return;
@@ -721,6 +755,7 @@ function attachDragEvents() {
 
             const newStatus = zone.dataset.status;
             const taskId = card.dataset.id;
+            const oldStatus = dragStartColumn;
 
             // Update task status in local state
             const task = state.tasks.find(t => t.id === taskId);
@@ -728,11 +763,25 @@ function attachDragEvents() {
                 task.status = newStatus;
                 // Update in database
                 updateTaskInDatabase(taskId, { status: newStatus, userId: currentUserId });
-                showToast(`Task moved to ${newStatus}`, 'success');
+                
+                // Show appropriate message
+                if (oldStatus !== newStatus) {
+                    const statusNames = {
+                        'todo': 'To Do',
+                        'progress': 'In Progress', 
+                        'done': 'Done'
+                    };
+                    showToast(`Task moved to ${statusNames[newStatus]}`, 'success');
+                }
             }
 
+            // Clean up
+            zone.classList.remove('drag-over');
             isDragging = false;
             card.classList.remove('dragging');
+            dropzones.forEach(dz => {
+                dz.classList.remove('drop-zone-active', 'drag-over');
+            });
         });
     });
 }
