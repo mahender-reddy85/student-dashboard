@@ -655,6 +655,99 @@ function toggleSortOrder() {
     renderBoard();
 }
 
+// --- Drag and Drop ---
+let isDragging = false;
+
+function attachDragEvents() {
+    const cards = document.querySelectorAll('.task-card');
+    const dropzones = document.querySelectorAll('.task-list');
+
+    cards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            isDragging = true;
+            e.dataTransfer.setData('text/plain', card.dataset.id);
+            setTimeout(() => {
+                card.classList.add('dragging');
+            }, 0);
+        });
+
+        card.addEventListener('dragend', () => {
+            isDragging = false;
+            card.classList.remove('dragging');
+            // Add small delay to prevent race condition with drag operations
+            setTimeout(() => {
+                renderBoard(); // Cleanup and persist
+            }, 50);
+        });
+    });
+
+    dropzones.forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+            // Prevent dragover if drag operation has ended
+            if (!isDragging) return;
+
+            e.preventDefault();
+            const afterElement = getDragAfterElement(zone, e.clientY);
+            const card = document.querySelector('.dragging');
+
+            // Validate that card is a valid DOM element
+            if (!card || !(card instanceof HTMLElement)) return;
+
+            // Validate that afterElement is null or a valid DOM element
+            if (afterElement && !(afterElement instanceof HTMLElement)) return;
+
+            try {
+                if (afterElement) {
+                    zone.insertBefore(card, afterElement);
+                } else {
+                    zone.appendChild(card);
+                }
+            } catch (error) {
+                console.error('Drag and drop error:', error);
+                // Fallback: don't move element
+            }
+        });
+
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!isDragging) return;
+
+            const card = document.querySelector('.dragging');
+            if (!card) return;
+
+            const newStatus = zone.dataset.status;
+            const taskId = card.dataset.id;
+
+            // Update task status in local state
+            const task = state.tasks.find(t => t.id === taskId);
+            if (task) {
+                task.status = newStatus;
+                // Update in database
+                updateTaskInDatabase(taskId, { status: newStatus, userId: currentUserId });
+                showToast(`Task moved to ${newStatus}`, 'success');
+            }
+
+            isDragging = false;
+            card.classList.remove('dragging');
+        });
+    });
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
 function renderBoard() {
     DOM.board.innerHTML = '';
 
@@ -899,214 +992,24 @@ function createTaskCard(task) {
         </div>
     `;
 
+        // Set up inline editing after card is created (only for non-checklist items)
+        if (!isChecklist) {
+            setupInlineEditing(card, task);
+        }
+
         return card;
-    }
+}
 
-    // --- Drag and Drop ---
-    let isDragging = false;
-
-    function attachDragEvents() {
-        const cards = document.querySelectorAll('.task-card');
-        const dropzones = document.querySelectorAll('.task-list');
-
-        cards.forEach(card => {
-            card.addEventListener('dragstart', (e) => {
-                isDragging = true;
-                e.dataTransfer.setData('text/plain', card.dataset.id);
-                setTimeout(() => {
-                    card.classList.add('dragging');
-                }, 0);
-            });
-
-            card.addEventListener('dragend', () => {
-                isDragging = false;
-                card.classList.remove('dragging');
-                // Add small delay to prevent race condition with drag operations
-                setTimeout(() => {
-                    renderBoard(); // Cleanup and persist
-                }, 50);
-            });
-        });
-
-        dropzones.forEach(zone => {
-            zone.addEventListener('dragover', (e) => {
-                // Prevent dragover if drag operation has ended
-                if (!isDragging) return;
-
-                e.preventDefault();
-                const afterElement = getDragAfterElement(zone, e.clientY);
-                const card = document.querySelector('.dragging');
-
-                // Validate that card is a valid DOM element
-                if (!card || !(card instanceof HTMLElement)) return;
-
-                // Validate that afterElement is null or a valid DOM element
-                if (afterElement && !(afterElement instanceof HTMLElement)) return;
-
-                try {
-                    if (afterElement) {
-                        zone.insertBefore(card, afterElement);
-                    } else {
-                        zone.appendChild(card);
-                    }
-                } catch (error) {
-                    console.error('Drag and drop error:', error);
-                    // Fallback: don't move the element
-                }
-            });
-
-            zone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const taskId = e.dataTransfer.getData('text/plain');
-                const status = zone.dataset.status;
-                updateTaskStatus(taskId, status);
-            });
-        });
-    }
-
-    function getDragAfterElement(container, y) {
-        try {
-            const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
-
-            if (draggableElements.length === 0) {
-                return null;
-            }
-
-            return draggableElements.reduce((closest, child) => {
-                // Ensure child is a valid element
-                if (!(child instanceof HTMLElement)) {
-                    return closest;
-                }
-
-                const box = child.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset: offset, element: child };
-                } else {
-                    return closest;
-                }
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        } catch (error) {
-            console.error('getDragAfterElement error:', error);
-            return null;
-        }
-    }
-
-    function updateTaskStatus(id, status) {
-        const task = state.tasks.find(t => t.id === id);
-        if (task) {
-            const oldStatus = task.status;
-            task.status = status;
-
-            // If moving to a different column, update order
-            if (oldStatus !== status) {
-                // Get all tasks in the new column and update their order
-                const columnTasks = state.tasks.filter(t => t.status === status);
-                columnTasks.forEach((columnTask, index) => {
-                    columnTask.order = index;
-                });
-            } else {
-                // Reordering within the same column - get the actual DOM order
-                const taskList = document.querySelector(`.task-list[data-status="${status}"]`);
-                if (taskList) {
-                    const cards = taskList.querySelectorAll('.task-card');
-                    cards.forEach((card, index) => {
-                        const cardTask = state.tasks.find(t => t.id === card.dataset.id);
-                        if (cardTask) {
-                            cardTask.order = index;
-                        }
-                    });
-                }
-            }
-
-            // Update in database with status and order
-            updateTaskInDatabase(id, {
-                status: status,
-                order: task.order,
-                userId: currentUserId
-            });
-
-            // Update all tasks in the column to maintain order
-            const columnTasks = state.tasks.filter(t => t.status === status);
-            columnTasks.forEach(columnTask => {
-                updateTaskInDatabase(columnTask.id, {
-                    order: columnTask.order,
-                    userId: currentUserId
-                });
-            });
-
-            renderBoard();
-        }
-    }
-
-    // File Handling
-    function handleFileDrop(e) {
+// --- Event Handlers ---
+function setupEventListeners() {
+    // Prevent default drag behaviors
+    function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
-
-        const dropZone = document.getElementById('dropZoneOverlay');
-        dropZone.classList.remove('active');
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            // Get the current task being edited or create a new one
-            const taskId = document.getElementById('taskId')?.value;
-            const task = taskId ? state.tasks.find(t => t.id === taskId) : null;
-
-            if (task) {
-                // Add files to existing task
-                task.files = task.files || [];
-                Array.from(files).forEach(file => {
-                    // In a real app, you would upload the file to a server here
-                    // For this example, we'll just store the file info
-                    task.files.push({
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
-                        lastModified: file.lastModified,
-                        // In a real app, you would have a URL to the uploaded file
-                        // For this example, we'll use a data URL for images
-                        url: file.type.startsWith('image/') ? URL.createObjectURL(file) : '#'
-                    });
-                });
-                // saveState(); // DISABLED - Using database
-                renderBoard();
-            } else {
-                // If no task is being edited, create a new task with the files
-                const newTask = {
-                    id: Date.now().toString(),
-                    title: files[0].name.split('.')[0], // Use first filename as title
-                    description: `Added ${files.length} file(s)`,
-                    status: 'todo',
-                    priority: 'medium',
-                    files: Array.from(files).map(file => ({
-                        name: file.name,
-                        size: file.size,
-                        type: file.type,
-                        lastModified: file.lastModified,
-                        url: file.type.startsWith('image/') ? URL.createObjectURL(file) : '#'
-                    })),
-                    createdAt: Date.now()
-                };
-
-                state.tasks.push(newTask);
-                // saveState(); // DISABLED - Using database
-                renderBoard();
-            }
-        }
     }
 
-    // --- Event Handlers ---
-    function setupEventListeners() {
-        // Prevent default drag behaviors
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        // Add keyboard event listener
-        document.addEventListener('keydown', handleKeyboardShortcuts);
+    // Add keyboard event listener
+    document.addEventListener('keydown', handleKeyboardShortcuts);
 
         // Sort button
         document.getElementById('sortByDate')?.addEventListener('click', toggleSortOrder);
@@ -1787,72 +1690,28 @@ function createTaskCard(task) {
         return div.innerHTML;
     }
 
-    // Keyboard Shortcuts
-    function handleKeyboardShortcuts(e) {
-        // Don't trigger if typing in an input or textarea
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
-            return;
+    // Initialize the app when the DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize the application first
+        init();
+
+        // Set up delete confirmation
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', () => {
+                if (taskToDelete) {
+                    deleteTask(taskToDelete);
+                    hideDeleteConfirmation();
+                }
+            });
         }
 
-        // Close modal with Escape
-        if (e.key === 'Escape') {
-            if (document.getElementById('modalOverlay').style.display === 'flex') {
-                closeModal();
-            } else if (document.getElementById('deleteConfirmModal').style.display === 'flex') {
-                hideDeleteConfirmation();
-            } else if (document.getElementById('keyboardShortcutsModal').style.display === 'flex') {
-                document.getElementById('keyboardShortcutsModal').style.display = 'none';
-            }
-            return;
+        // Set up cancel delete button
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+        if (cancelDeleteBtn) {
+            cancelDeleteBtn.addEventListener('click', hideDeleteConfirmation);
         }
-
-        // Only process single key shortcuts when not in an input field
-        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) {
-            return;
-        }
-
-        // Show keyboard shortcuts help with ?
-        if (e.key === '?') {
-            e.preventDefault();
-            const modal = document.getElementById('keyboardShortcutsModal');
-            if (modal) {
-                modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-            }
-            return;
-        }
-
-        // Focus search with /
-        if (e.key === '/') {
-            e.preventDefault();
-            const searchInput = document.getElementById('searchInput');
-            if (searchInput) {
-                searchInput.focus();
-            }
-            return;
-        }
-
-        // New task with N
-        if (e.key.toLowerCase() === 'n') {
-            e.preventDefault();
-            const addButtons = document.querySelectorAll('.add-task-btn');
-            if (addButtons.length > 0) {
-                addButtons[0].click(); // Click the first "Add Task" button
-            }
-            return;
-        }
-
-        // Toggle theme with T
-        if (e.key.toLowerCase() === 't') {
-            e.preventDefault();
-            ThemeManager.toggleTheme();
-            return;
-        }
-    }
-}
-// Initialize the app when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize the application first
-    init();
+        document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
 
     // Set up delete confirmation
     const confirmDeleteBtn = document.getElementById('confirmDelete');
