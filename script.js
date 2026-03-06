@@ -854,7 +854,7 @@ function renderBoard() {
             // Filter by priority or checklist
             const matchesPriority = state.priorityFilter === 'all' ||
                 (state.priorityFilter === 'checklist' && task.isChecklist) ||
-                (task.priority && task.priority.toLowerCase() === state.priorityFilter);
+                (state.priorityFilter !== 'checklist' && !task.isChecklist && task.priority && task.priority.toLowerCase() === state.priorityFilter);
 
             return matchesSearch && matchesPriority;
         });
