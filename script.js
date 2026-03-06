@@ -156,11 +156,11 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         if (currentUserId === 'skip-auth-user') {
             // Use localStorage for skip auth users
             const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
-            
+
             // Calculate order for new task (add to end of column)
             const columnTasks = tasks.filter(task => task.status === status);
             const newOrder = columnTasks.length;
-            
+
             const newTask = {
                 id: Date.now().toString(),
                 title: title,
@@ -682,10 +682,10 @@ function attachDragEvents() {
             isDragging = true;
             draggedElement = card;
             dragStartColumn = card.closest('.task-list').dataset.status;
-            
+
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', card.dataset.id);
-            
+
             // Add visual feedback
             setTimeout(() => {
                 card.classList.add('dragging');
@@ -700,13 +700,13 @@ function attachDragEvents() {
             isDragging = false;
             draggedElement = null;
             dragStartColumn = null;
-            
+
             // Remove visual feedback
             card.classList.remove('dragging');
             dropzones.forEach(zone => {
                 zone.classList.remove('drop-zone-active');
             });
-            
+
             // Add small delay to prevent race condition with drag operations
             setTimeout(() => {
                 renderBoard(); // Cleanup and persist
@@ -721,7 +721,7 @@ function attachDragEvents() {
 
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            
+
             const afterElement = getDragAfterElement(zone, e.clientY);
             const card = document.querySelector('.dragging');
 
@@ -770,16 +770,16 @@ function attachDragEvents() {
             const task = state.tasks.find(t => t.id === taskId);
             if (task) {
                 const statusChanged = oldStatus !== newStatus;
-                
+
                 // Update status if changed
                 if (statusChanged) {
                     task.status = newStatus;
                 }
-                
+
                 // Update order based on current position in the column
                 const allCardsInZone = [...zone.querySelectorAll('.task-card')];
                 const newPosition = allCardsInZone.findIndex(c => c.dataset.id === taskId);
-                
+
                 // Update order for all tasks in this column
                 allCardsInZone.forEach((cardElement, index) => {
                     const cardTaskId = cardElement.dataset.id;
@@ -788,24 +788,24 @@ function attachDragEvents() {
                         cardTask.order = index;
                     }
                 });
-                
+
                 // Update in database
-                const updateData = { 
+                const updateData = {
                     order: task.order,
-                    userId: currentUserId 
+                    userId: currentUserId
                 };
-                
+
                 if (statusChanged) {
                     updateData.status = newStatus;
                 }
-                
+
                 updateTaskInDatabase(taskId, updateData);
-                
+
                 // Show appropriate message
                 if (statusChanged) {
                     const statusNames = {
                         'todo': 'To Do',
-                        'progress': 'In Progress', 
+                        'progress': 'In Progress',
                         'done': 'Done'
                     };
                     showToast(`Task moved to ${statusNames[newStatus]}`, 'success');
@@ -1381,13 +1381,13 @@ window.createChecklistItem = function (status) {
     if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-        
+
         // Reset UI
         document.getElementById('newChecklistInput').value = '';
         document.getElementById('recentlyAddedItems').style.display = 'none';
         document.getElementById('recentItemsList').innerHTML = '';
         document.getElementById('itemsCount').textContent = '0 items added';
-        
+
         setTimeout(() => {
             document.getElementById('newChecklistInput').focus();
         }, 100);
@@ -1411,7 +1411,7 @@ window.closeChecklistModal = function () {
 
 async function saveQueuedChecklistItems() {
     if (recentlyAddedChecklistItems.length === 0) return;
-    
+
     try {
         // Save all queued items to database
         const savePromises = recentlyAddedChecklistItems.map(async (item) => {
@@ -1426,7 +1426,7 @@ async function saveQueuedChecklistItems() {
                 taskData.isChecklist,
                 taskData.completed
             );
-            
+
             if (docRef) {
                 // Update with real database ID
                 taskData.id = docRef.id;
@@ -1434,28 +1434,28 @@ async function saveQueuedChecklistItems() {
             }
             return null;
         });
-        
+
         const results = await Promise.all(savePromises);
-        
+
         // Add successfully saved tasks to state
         const savedTasks = results.filter(task => task !== null);
         state.tasks.push(...savedTasks);
-        
+
         // Show success message
         showToast(`${savedTasks.length} checklist item${savedTasks.length !== 1 ? 's' : ''} added`, 'success');
-        
+
         // Render the board to show the new tasks
         renderBoard();
-        
+
         // Close modal and reset
         const modal = document.getElementById('checklistModal');
         modal.style.display = 'none';
         document.body.style.overflow = '';
         document.getElementById('newChecklistInput').value = '';
-        
+
         // Clear the queue
         recentlyAddedChecklistItems = [];
-        
+
     } catch (error) {
         console.error('Error saving checklist items:', error);
         showToast('Failed to save some checklist items', 'error');
@@ -1489,7 +1489,7 @@ window.saveChecklistItem = function () {
         timestamp: new Date().toLocaleTimeString(),
         taskData: checklistTask // Store the full task data
     });
-    
+
     // Update UI
     updateRecentlyAddedItems();
     showToast('Checklist item queued', 'info');
@@ -1503,10 +1503,10 @@ function updateRecentlyAddedItems() {
     const container = document.getElementById('recentlyAddedItems');
     const list = document.getElementById('recentItemsList');
     const count = document.getElementById('itemsCount');
-    
+
     if (recentlyAddedChecklistItems.length > 0) {
         container.style.display = 'block';
-        
+
         // Update list HTML
         list.innerHTML = recentlyAddedChecklistItems.map(item => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
@@ -1517,7 +1517,7 @@ function updateRecentlyAddedItems() {
                 <span style="font-size: 11px; color: #94a3b8;">${item.timestamp}</span>
             </div>
         `).join('');
-        
+
         // Update count
         count.textContent = `${recentlyAddedChecklistItems.length} item${recentlyAddedChecklistItems.length !== 1 ? 's' : ''} added`;
     } else {
@@ -1526,7 +1526,7 @@ function updateRecentlyAddedItems() {
     }
 }
 
-window.clearRecentItems = function() {
+window.clearRecentItems = function () {
     recentlyAddedChecklistItems = [];
     updateRecentlyAddedItems();
     showToast('Queued items cleared', 'info');
