@@ -1396,9 +1396,68 @@ window.createChecklistItem = function (status) {
 window.closeChecklistModal = function () {
     const modal = document.getElementById('checklistModal');
     if (modal) {
+        // If there are queued items, save them all before closing
+        if (recentlyAddedChecklistItems.length > 0) {
+            saveQueuedChecklistItems();
+        } else {
+            // Just close if no items to save
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            document.getElementById('newChecklistInput').value = '';
+        }
+    }
+}
+
+async function saveQueuedChecklistItems() {
+    if (recentlyAddedChecklistItems.length === 0) return;
+    
+    try {
+        // Save all queued items to database
+        const savePromises = recentlyAddedChecklistItems.map(async (item) => {
+            const taskData = item.taskData;
+            const docRef = await saveTaskToDatabase(
+                taskData.title,
+                taskData.status,
+                taskData.dueDate,
+                taskData.description,
+                taskData.priority,
+                taskData.subtasks,
+                taskData.isChecklist,
+                taskData.completed
+            );
+            
+            if (docRef) {
+                // Update with real database ID
+                taskData.id = docRef.id;
+                return taskData;
+            }
+            return null;
+        });
+        
+        const results = await Promise.all(savePromises);
+        
+        // Add successfully saved tasks to state
+        const savedTasks = results.filter(task => task !== null);
+        state.tasks.push(...savedTasks);
+        
+        // Show success message
+        showToast(`${savedTasks.length} checklist item${savedTasks.length !== 1 ? 's' : ''} added`, 'success');
+        
+        // Render the board to show the new tasks
+        renderBoard();
+        
+        // Close modal and reset
+        const modal = document.getElementById('checklistModal');
         modal.style.display = 'none';
         document.body.style.overflow = '';
         document.getElementById('newChecklistInput').value = '';
+        
+        // Clear the queue
+        recentlyAddedChecklistItems = [];
+        
+    } catch (error) {
+        console.error('Error saving checklist items:', error);
+        showToast('Failed to save some checklist items', 'error');
     }
 }
 
@@ -1407,8 +1466,9 @@ window.saveChecklistItem = function () {
     const taskText = input.value;
     if (!taskText || taskText.trim() === '') return;
 
+    // Create checklist task object but don't add to state or database yet
     const checklistTask = {
-        id: Date.now().toString(),
+        id: Date.now().toString() + Math.random(), // Temporary ID
         title: taskText.trim(),
         description: '',
         priority: 'low',
@@ -1421,37 +1481,21 @@ window.saveChecklistItem = function () {
         createdAt: Date.now()
     };
 
-    // Save to database
-    saveTaskToDatabase(
-        checklistTask.title,
-        checklistTask.status,
-        checklistTask.dueDate,
-        checklistTask.description,
-        checklistTask.priority,
-        checklistTask.subtasks,
-        checklistTask.isChecklist
-    ).then(docRef => {
-        if (docRef) {
-            checklistTask.id = docRef.id;
-            state.tasks.push(checklistTask);
-            
-            // Add to recently added list
-            recentlyAddedChecklistItems.push({
-                id: checklistTask.id,
-                title: checklistTask.title,
-                timestamp: new Date().toLocaleTimeString()
-            });
-            
-            // Update UI
-            updateRecentlyAddedItems();
-            renderBoard();
-            showToast('Checklist item added', 'success');
-
-            // Clear input and focus for next item
-            input.value = '';
-            input.focus();
-        }
+    // Add to recently added list (for UI display)
+    recentlyAddedChecklistItems.push({
+        id: checklistTask.id,
+        title: checklistTask.title,
+        timestamp: new Date().toLocaleTimeString(),
+        taskData: checklistTask // Store the full task data
     });
+    
+    // Update UI
+    updateRecentlyAddedItems();
+    showToast('Checklist item queued', 'info');
+
+    // Clear input and focus for next item
+    input.value = '';
+    input.focus();
 }
 
 function updateRecentlyAddedItems() {
@@ -1466,7 +1510,7 @@ function updateRecentlyAddedItems() {
         list.innerHTML = recentlyAddedChecklistItems.map(item => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
                 <div style="display: flex; align-items: center; flex-grow: 1;">
-                    <i class="fas fa-check-square" style="color: #10b981; margin-right: 8px; font-size: 12px;"></i>
+                    <i class="fas fa-clock" style="color: #f59e0b; margin-right: 8px; font-size: 12px;"></i>
                     <span style="font-size: 13px; color: #334155;">${sanitize(item.title)}</span>
                 </div>
                 <span style="font-size: 11px; color: #94a3b8;">${item.timestamp}</span>
@@ -1484,7 +1528,7 @@ function updateRecentlyAddedItems() {
 window.clearRecentItems = function() {
     recentlyAddedChecklistItems = [];
     updateRecentlyAddedItems();
-    showToast('Recent items cleared', 'info');
+    showToast('Queued items cleared', 'info');
 }
 
 function toggleChecklistItem(taskId, isCompleted) {
