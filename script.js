@@ -156,6 +156,11 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         if (currentUserId === 'skip-auth-user') {
             // Use localStorage for skip auth users
             const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            
+            // Calculate order for new task (add to end of column)
+            const columnTasks = tasks.filter(task => task.status === status);
+            const newOrder = columnTasks.length;
+            
             const newTask = {
                 id: Date.now().toString(),
                 title: title,
@@ -163,7 +168,7 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
                 status: status,
                 priority: priority,
                 pinned: false,
-                order: 0,
+                order: newOrder,
                 dueDate: dueDate,
                 createdAt: new Date().getTime(),
                 updatedAt: new Date().getTime(),
@@ -186,13 +191,17 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         // Convert dueDate to Firestore Timestamp if provided
         const dueDateTimestamp = dueDate ? Timestamp.fromDate(new Date(dueDate)) : null;
 
+        // Calculate order for new task (add to end of column)
+        const columnTasks = state.tasks.filter(task => task.status === status);
+        const newOrder = columnTasks.length;
+
         const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             description: description,
             status: status,
             priority: priority,
             pinned: false,
-            order: 0,
+            order: newOrder,
             dueDate: dueDateTimestamp,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
@@ -760,12 +769,40 @@ function attachDragEvents() {
             // Update task status in local state
             const task = state.tasks.find(t => t.id === taskId);
             if (task) {
-                task.status = newStatus;
+                const statusChanged = oldStatus !== newStatus;
+                
+                // Update status if changed
+                if (statusChanged) {
+                    task.status = newStatus;
+                }
+                
+                // Update order based on current position in the column
+                const allCardsInZone = [...zone.querySelectorAll('.task-card')];
+                const newPosition = allCardsInZone.findIndex(c => c.dataset.id === taskId);
+                
+                // Update order for all tasks in this column
+                allCardsInZone.forEach((cardElement, index) => {
+                    const cardTaskId = cardElement.dataset.id;
+                    const cardTask = state.tasks.find(t => t.id === cardTaskId);
+                    if (cardTask) {
+                        cardTask.order = index;
+                    }
+                });
+                
                 // Update in database
-                updateTaskInDatabase(taskId, { status: newStatus, userId: currentUserId });
+                const updateData = { 
+                    order: task.order,
+                    userId: currentUserId 
+                };
+                
+                if (statusChanged) {
+                    updateData.status = newStatus;
+                }
+                
+                updateTaskInDatabase(taskId, updateData);
                 
                 // Show appropriate message
-                if (oldStatus !== newStatus) {
+                if (statusChanged) {
                     const statusNames = {
                         'todo': 'To Do',
                         'progress': 'In Progress', 
@@ -1139,7 +1176,12 @@ function setupEventListeners() {
         if (checklistBtn) createChecklistItem(checklistBtn.dataset.status);
 
         const editBtn = e.target.closest('.edit-btn');
-        if (editBtn) openModal(editBtn.dataset.id);
+        if (editBtn) {
+            const taskId = editBtn.dataset.id;
+            const task = state.tasks.find(t => t.id === taskId);
+            const currentStatus = task ? task.status : 'todo';
+            openModal(taskId, currentStatus);
+        }
 
         const deleteBtn = e.target.closest('.delete-btn');
         if (deleteBtn) showDeleteConfirmation(deleteBtn.dataset.id);
@@ -1441,6 +1483,8 @@ function openModal(taskId = null, status = 'todo') {
             document.getElementById('taskDesc').value = task.description || '';
             document.getElementById('taskPriority').value = task.priority || 'medium';
             document.getElementById('taskDueDate').value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+            // Preserve the current status when editing
+            document.getElementById('taskStatus').value = task.status || status;
 
             // Populate subtasks
             const subtasksContainer = document.getElementById('subtasksContainer');
