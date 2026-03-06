@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Application State Management
  * @namespace state
  * @property {Array} tasks - Array of task objects
@@ -61,16 +61,16 @@ function showToast(message, type = 'info', duration = 5000, undoAction = null) {
     const toastId = 'toast-' + Date.now();
     toast.id = toastId;
 
-    let icon = 'ℹ️';
+    let icon = 'Γä╣∩╕Å';
     switch (type) {
         case 'success':
-            icon = '✅';
+            icon = 'Γ£à';
             break;
         case 'error':
-            icon = '❌';
+            icon = 'Γ¥î';
             break;
         case 'warning':
-            icon = '⚠️';
+            icon = 'ΓÜá∩╕Å';
             break;
     }
 
@@ -895,7 +895,7 @@ function createTaskCard(task) {
     let dueDateText = '';
     if (task.dueDate) {
         const date = new Date(task.dueDate);
-        dueDateText = `• Due ${date.toLocaleDateString()}`;
+        dueDateText = `ΓÇó Due ${date.toLocaleDateString()}`;
     }
 
     // Calculate progress for subtasks (only for non-checklist items)
@@ -916,7 +916,7 @@ function createTaskCard(task) {
                 ${task.subtasks.map(subtask => `
                     <div class="subtask-preview">
                         <span class="subtask-checkbox ${subtask.completed ? 'completed' : ''}">
-                            ${subtask.completed ? '✓' : ''}
+                            ${subtask.completed ? 'Γ£ô' : ''}
                         </span>
                         <span class="subtask-text ${subtask.completed ? 'completed' : ''}">
                             ${sanitize(subtask.text)}
@@ -1305,7 +1305,6 @@ function createChecklistItem(status) {
     ).then(docRef => {
         if (docRef) {
             checklistTask.id = docRef.id;
-            state.tasks.push(checklistTask);
             showToast('Checklist item added', 'success');
             renderBoard();
         }
