@@ -20,8 +20,10 @@
   <link rel="preconnect" href="https://firebase.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;800&display=swap" rel="stylesheet">
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;800&display=swap"
+    rel="stylesheet">
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
@@ -798,6 +800,37 @@
       </div>
     </div>
 
+    <!-- Checklist Dialog Box -->
+    <div class="modal-overlay" id="checklistModal" style="display: none;" role="dialog" aria-modal="true"
+      aria-labelledby="checklistModalTitle">
+      <div class="modal" style="max-width: 450px;">
+        <div class="modal-header">
+          <h3 id="checklistModalTitle"><i class="fas fa-list-check"></i> Add Checklist Items</h3>
+          <button class="icon-btn" onclick="closeChecklistModal()" aria-label="Close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 0;">
+            <div style="flex-grow: 1;">
+              <label for="newChecklistInput">Item Name</label>
+              <input type="text" id="newChecklistInput" class="form-control" placeholder="Type checking task here..."
+                onkeypress="if(event.key === 'Enter') { event.preventDefault(); document.getElementById('addMoreChecklistBtn').click(); }">
+            </div>
+            <button type="button" id="addMoreChecklistBtn" class="btn btn-primary"
+              style="height: 48px; border-radius: 8px;" onclick="saveChecklistItem()">
+              <i class="fas fa-plus"></i> Add+
+            </button>
+          </div>
+          <p style="font-size: 13px; color: #64748b; margin-top: 8px;">Press Enter or Add+ to keep adding more checklist
+            items.</p>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+          <button class="btn btn-secondary" onclick="closeChecklistModal()" aria-label="Done">Done</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay" id="keyboardShortcutsModal" style="display: none;">
       <div class="modal" style="max-width: 500px;">
         <div class="modal-header">
@@ -838,21 +871,21 @@
     <!-- Performance monitoring -->
     <script>
       // Performance metrics
-      window.addEventListener('load', function() {
-        setTimeout(function() {
+      window.addEventListener('load', function () {
+        setTimeout(function () {
           const perfData = performance.getEntriesByType('navigation')[0];
           const loadTime = perfData.loadEventEnd - perfData.loadEventStart;
           console.log('Page load time:', loadTime + 'ms');
-          
+
           // Show loading indicator if page takes too long
           if (loadTime > 3000) {
             console.warn('Slow page load detected');
           }
         }, 0);
       });
-      
+
       // Error handling for failed resources
-      window.addEventListener('error', function(e) {
+      window.addEventListener('error', function (e) {
         if (e.target !== window) {
           console.error('Resource failed to load:', e.target.src || e.target.href);
         }

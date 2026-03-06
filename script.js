@@ -1275,8 +1275,32 @@ function setupEventListeners() {
 } // Added missing closing brace for setupEventListeners function
 
 // --- Checklist Management ---
-function createChecklistItem(status) {
-    const taskText = prompt('Enter checklist item:');
+let currentChecklistStatus = 'todo';
+
+window.createChecklistItem = function (status) {
+    currentChecklistStatus = status;
+    const modal = document.getElementById('checklistModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+            document.getElementById('newChecklistInput').focus();
+        }, 100);
+    }
+}
+
+window.closeChecklistModal = function () {
+    const modal = document.getElementById('checklistModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        document.getElementById('newChecklistInput').value = '';
+    }
+}
+
+window.saveChecklistItem = function () {
+    const input = document.getElementById('newChecklistInput');
+    const taskText = input.value;
     if (!taskText || taskText.trim() === '') return;
 
     const checklistTask = {
@@ -1284,7 +1308,7 @@ function createChecklistItem(status) {
         title: taskText.trim(),
         description: '',
         priority: 'low',
-        status: status,
+        status: currentChecklistStatus,
         dueDate: '',
         completed: false,
         isChecklist: true,
@@ -1308,6 +1332,10 @@ function createChecklistItem(status) {
             state.tasks.push(checklistTask);
             showToast('Checklist item added', 'success');
             renderBoard();
+
+            // clear input for the next item
+            input.value = '';
+            input.focus();
         }
     });
 }
