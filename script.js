@@ -998,18 +998,18 @@ function createTaskCard(task) {
         }
 
         return card;
-}
-
-// --- Event Handlers ---
-function setupEventListeners() {
-    // Prevent default drag behaviors
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
     }
 
-    // Add keyboard event listener
-    document.addEventListener('keydown', handleKeyboardShortcuts);
+    // --- Event Handlers ---
+    function setupEventListeners() {
+        // Prevent default drag behaviors
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Add keyboard event listener
+        document.addEventListener('keydown', handleKeyboardShortcuts);
 
         // Sort button
         document.getElementById('sortByDate')?.addEventListener('click', toggleSortOrder);
@@ -1711,48 +1711,31 @@ function setupEventListeners() {
         if (cancelDeleteBtn) {
             cancelDeleteBtn.addEventListener('click', hideDeleteConfirmation);
         }
+
         document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
-
-    // Set up delete confirmation
-    const confirmDeleteBtn = document.getElementById('confirmDelete');
-    if (confirmDeleteBtn) {
-        confirmDeleteBtn.addEventListener('click', () => {
-            if (taskToDelete) {
-                deleteTask(taskToDelete);
-                hideDeleteConfirmation();
-            }
-        });
-    }
-
-    // Set up cancel delete button
-    const cancelDeleteBtn = document.getElementById('cancelDelete');
-    if (cancelDeleteBtn) {
-        cancelDeleteBtn.addEventListener('click', hideDeleteConfirmation);
-    }
-    document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
-        const input = document.getElementById('newSubtaskInput');
-        if (input.value.trim()) {
-            addSubtask(input.value.trim());
-        }
-    });
-
-    document.getElementById('newSubtaskInput')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
             const input = document.getElementById('newSubtaskInput');
             if (input.value.trim()) {
                 addSubtask(input.value.trim());
             }
-        }
-    });
+        });
 
-    document.getElementById('subtasksContainer')?.addEventListener('click', (e) => {
-        const deleteBtn = e.target.closest('.delete-subtask');
-        if (deleteBtn) {
-            const subtaskEl = deleteBtn.closest('.subtask');
-            if (subtaskEl) {
-                subtaskEl.remove();
+        document.getElementById('newSubtaskInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const input = document.getElementById('newSubtaskInput');
+                if (input.value.trim()) {
+                    addSubtask(input.value.trim());
+                }
             }
-        }
+        });
+
+        document.getElementById('subtasksContainer')?.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.delete-subtask');
+            if (deleteBtn) {
+                const subtaskEl = deleteBtn.closest('.subtask');
+                if (subtaskEl) {
+                    subtaskEl.remove();
+                }
+            }
+        });
     });
-});
