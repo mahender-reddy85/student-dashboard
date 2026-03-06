@@ -150,7 +150,7 @@ function hideToast(toastElement) {
 }
 
 // Database Functions
-async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = []) {
+async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], isChecklist = false) {
     try {
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
@@ -168,7 +168,8 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
                 createdAt: new Date().getTime(),
                 updatedAt: new Date().getTime(),
                 userId: currentUserId,
-                subtasks: subtasks
+                subtasks: subtasks,
+                isChecklist: isChecklist
             };
             tasks.push(newTask);
             localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
@@ -195,7 +196,8 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             userId: currentUserId,
-            subtasks: subtasks
+            subtasks: subtasks,
+            isChecklist: isChecklist
         });
 
         // Return the document reference with the generated ID
@@ -701,9 +703,14 @@ function renderBoard() {
                 <h3 class="column-title">
                     ${col.title} <span class="task-count">${columnTasks.length}</span>
                 </h3>
-                <button class="add-task-btn" data-status="${col.id}">
-                    <i class="fas fa-plus"></i>
-                </button>
+                <div class="column-actions">
+                    <button class="add-checklist-btn" data-status="${col.id}" title="Add checklist item">
+                        <i class="fas fa-check-square"></i>
+                    </button>
+                    <button class="add-task-btn" data-status="${col.id}" title="Add task">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
             </div>
             <div class="task-list" data-status="${col.id}">
                 ${columnTasks.length === 0 ? '<div class="empty-state">No tasks here</div>' : ''}
@@ -764,7 +771,8 @@ function getFileIcon(filename) {
 
 function createTaskCard(task) {
     const card = document.createElement('div');
-    card.className = `task-card ${task.pinned ? 'pinned' : ''}`;
+    const isChecklist = task.isChecklist || false;
+    card.className = `task-card ${task.pinned ? 'pinned' : ''} ${isChecklist ? 'checklist-item' : ''}`;
     card.draggable = true;
     card.dataset.taskId = task.id;
 
@@ -783,10 +791,12 @@ function createTaskCard(task) {
     card.draggable = true;
     card.dataset.id = task.id;
 
-    // Set up inline editing after card is created
-    setTimeout(() => {
-        setupInlineEditing(card, task);
-    }, 0);
+    // Set up inline editing after card is created (only for non-checklist items)
+    if (!isChecklist) {
+        setTimeout(() => {
+            setupInlineEditing(card, task);
+        }, 0);
+    }
 
     // Format due date
     let dueDateText = '';
@@ -795,9 +805,9 @@ function createTaskCard(task) {
         dueDateText = `• Due ${date.toLocaleDateString()}`;
     }
 
-    // Calculate progress for subtasks
+    // Calculate progress for subtasks (only for non-checklist items)
     let progressHTML = '';
-    if (task.subtasks && task.subtasks.length > 0) {
+    if (!isChecklist && task.subtasks && task.subtasks.length > 0) {
         const completedCount = task.subtasks.filter(st => st.completed).length;
         const progressPercent = (completedCount / task.subtasks.length) * 100;
         progressHTML = `
@@ -824,42 +834,61 @@ function createTaskCard(task) {
         `;
     }
 
-    card.innerHTML = `
-        <div class="card-header">
-            <div class="card-title" tabindex="0">
-                <span class="card-title-text">${sanitize(task.title) || '/'}</span>
-                <input type="text" class="card-title-edit" value="${sanitize(task.title) || ''}" style="display: none;">
+    if (isChecklist) {
+        // Checklist item with checkbox
+        card.innerHTML = `
+            <div class="checklist-content">
+                <label class="checklist-label">
+                    <input type="checkbox" class="checklist-checkbox" ${task.completed ? 'checked' : ''} 
+                           onchange="toggleChecklistItem('${task.id}', this.checked)">
+                    <span class="checklist-mark"></span>
+                    <span class="checklist-text ${task.completed ? 'completed' : ''}">${sanitize(task.title)}</span>
+                </label>
+                <div class="card-actions">
+                    <button class="icon-btn delete-btn" data-id="${task.id}" title="Delete">
+                        <i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i>
+                    </button>
+                </div>
             </div>
-            <div class="card-actions">
-                <button class="icon-btn pin-btn ${task.pinned ? 'pinned' : ''}" data-id="${task.id}" title="${task.pinned ? 'Unpin' : 'Pin'}">
-                    <i class="fas fa-thumbtack" style="color: ${task.pinned ? '#f59e0b' : '#94a3b8'}; font-size: 13px;"></i>
-                </button>
-                <button class="icon-btn duplicate-btn" data-id="${task.id}" title="Duplicate">
-                    <i class="fas fa-copy" style="color: #94a3b8; font-size: 13px;"></i>
-                </button>
-                <button class="icon-btn edit-btn" data-id="${task.id}" title="Edit">
-                    <i class="fas fa-pencil-alt" style="color: #94a3b8; font-size: 13px;"></i>
-                </button>
-                <button class="icon-btn delete-btn" data-id="${task.id}" title="Delete">
-                    <i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i>
-                </button>
+        `;
+    } else {
+        // Regular task card
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="card-title" tabindex="0">
+                    <span class="card-title-text">${sanitize(task.title) || '/'}</span>
+                    <input type="text" class="card-title-edit" value="${sanitize(task.title) || ''}" style="display: none;">
+                </div>
+                <div class="card-actions">
+                    <button class="icon-btn pin-btn ${task.pinned ? 'pinned' : ''}" data-id="${task.id}" title="${task.pinned ? 'Unpin' : 'Pin'}">
+                        <i class="fas fa-thumbtack" style="color: ${task.pinned ? '#f59e0b' : '#94a3b8'}; font-size: 13px;"></i>
+                    </button>
+                    <button class="icon-btn duplicate-btn" data-id="${task.id}" title="Duplicate">
+                        <i class="fas fa-copy" style="color: #94a3b8; font-size: 13px;"></i>
+                    </button>
+                    <button class="icon-btn edit-btn" data-id="${task.id}" title="Edit">
+                        <i class="fas fa-pencil-alt" style="color: #94a3b8; font-size: 13px;"></i>
+                    </button>
+                    <button class="icon-btn delete-btn" data-id="${task.id}" title="Delete">
+                        <i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i>
+                    </button>
+                </div>
             </div>
-        </div>
-        ${task.description ? `<div class="card-desc">${sanitize(task.description)}</div>` : ''}
-        
-        <!-- Subtask Progress -->
-        ${task.subtasks?.length > 0 ? `
-        <div class="subtask-progress">
-            <div class="progress-bar">
-                <div class="progress" style="width: ${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%"></div>
-            </div>
-            <div class="progress-text">
-                ${task.subtasks.filter(st => st.completed).length} of ${task.subtasks.length} tasks
-            </div>
-        </div>` : ''}
-        
-        <div class="card-footer">
-            <span class="priority-badge priority-${task.priority || 'medium'}">
+            ${task.description ? `<div class="card-desc">${sanitize(task.description)}</div>` : ''}
+            
+            <!-- Subtask Progress -->
+            ${task.subtasks?.length > 0 ? `
+            <div class="subtask-progress">
+                <div class="progress-bar">
+                    <div class="progress" style="width: ${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%"></div>
+                </div>
+                <div class="progress-text">
+                    ${task.subtasks.filter(st => st.completed).length} of ${task.subtasks.length} tasks
+                </div>
+            </div>` : ''}
+            
+            <div class="card-footer">
+                <span class="priority-badge priority-${task.priority || 'medium'}">
                 ${(task.priority || 'medium').toUpperCase()}
             </span>
             ${task.dueDate ? `
@@ -1087,6 +1116,9 @@ function setupEventListeners() {
         const addBtn = e.target.closest('.add-task-btn');
         if (addBtn) openModal(null, addBtn.dataset.status);
 
+        const checklistBtn = e.target.closest('.add-checklist-btn');
+        if (checklistBtn) createChecklistItem(checklistBtn.dataset.status);
+
         const editBtn = e.target.closest('.edit-btn');
         if (editBtn) openModal(editBtn.dataset.id);
 
@@ -1274,6 +1306,71 @@ function setupEventListeners() {
             hideClearBoardConfirmation();
         }
     });
+}
+
+// --- Checklist Management ---
+function createChecklistItem(status) {
+    const taskText = prompt('Enter checklist item:');
+    if (!taskText || taskText.trim() === '') return;
+
+    const checklistTask = {
+        id: Date.now().toString(),
+        title: taskText.trim(),
+        description: '',
+        priority: 'low',
+        status: status,
+        dueDate: '',
+        completed: false,
+        isChecklist: true,
+        userId: currentUserId,
+        subtasks: [],
+        createdAt: Date.now()
+    };
+
+    // Save to database
+    saveTaskToDatabase(
+        checklistTask.title,
+        checklistTask.status,
+        checklistTask.dueDate,
+        checklistTask.description,
+        checklistTask.priority,
+        checklistTask.subtasks,
+        checklistTask.isChecklist
+    ).then(docRef => {
+        if (docRef) {
+            checklistTask.id = docRef.id;
+            showToast('Checklist item added', 'success');
+            renderBoard();
+        }
+    });
+}
+
+function toggleChecklistItem(taskId, isCompleted) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (task) {
+        task.completed = isCompleted;
+        
+        // Update in database
+        updateTaskInDatabase(taskId, {
+            completed: isCompleted,
+            userId: currentUserId
+        });
+        
+        // Update visual state
+        const card = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (card) {
+            const textElement = card.querySelector('.checklist-text');
+            if (textElement) {
+                if (isCompleted) {
+                    textElement.classList.add('completed');
+                } else {
+                    textElement.classList.remove('completed');
+                }
+            }
+        }
+        
+        showToast(isCompleted ? 'Checklist item completed' : 'Checklist item unchecked', 'success');
+    }
 }
 
 // --- Modal Management ---

@@ -322,6 +322,123 @@ body {
     margin-bottom: 0.5rem;
 }
 
+.column-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.add-checklist-btn,
+.add-task-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.4rem;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.add-checklist-btn:hover,
+.add-task-btn:hover {
+    background-color: var(--primary);
+    color: white;
+    transform: scale(1.1);
+}
+
+.add-checklist-btn {
+    color: var(--success);
+}
+
+.add-checklist-btn:hover {
+    background-color: var(--success);
+}
+
+/* Checklist Items */
+.checklist-item {
+    padding: 12px !important;
+    background: var(--bg-secondary) !important;
+    border-left: 4px solid var(--success) !important;
+}
+
+.checklist-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.checklist-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    flex-grow: 1;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.checklist-checkbox {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checklist-mark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--success);
+    border-radius: 3px;
+    margin-right: 0.75rem;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.checklist-checkbox:checked + .checklist-mark {
+    background-color: var(--success);
+    border-color: var(--success);
+}
+
+.checklist-checkbox:checked + .checklist-mark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.checklist-text {
+    font-size: 14px;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.checklist-text.completed {
+    text-decoration: line-through;
+    opacity: 0.6;
+    color: var(--text-muted);
+}
+
+.checklist-item .card-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.checklist-item:hover .card-actions {
+    opacity: 1;
+}
+
 .column-title {
     font-weight: 600;
     color: var(--text-main);
