@@ -1371,13 +1371,22 @@ function setupEventListeners() {
 
 // --- Checklist Management ---
 let currentChecklistStatus = 'todo';
+let recentlyAddedChecklistItems = [];
 
 window.createChecklistItem = function (status) {
     currentChecklistStatus = status;
+    recentlyAddedChecklistItems = []; // Reset for new session
     const modal = document.getElementById('checklistModal');
     if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        
+        // Reset UI
+        document.getElementById('newChecklistInput').value = '';
+        document.getElementById('recentlyAddedItems').style.display = 'none';
+        document.getElementById('recentItemsList').innerHTML = '';
+        document.getElementById('itemsCount').textContent = '0 items added';
+        
         setTimeout(() => {
             document.getElementById('newChecklistInput').focus();
         }, 100);
@@ -1425,14 +1434,57 @@ window.saveChecklistItem = function () {
         if (docRef) {
             checklistTask.id = docRef.id;
             state.tasks.push(checklistTask);
-            showToast('Checklist item added', 'success');
+            
+            // Add to recently added list
+            recentlyAddedChecklistItems.push({
+                id: checklistTask.id,
+                title: checklistTask.title,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            
+            // Update UI
+            updateRecentlyAddedItems();
             renderBoard();
+            showToast('Checklist item added', 'success');
 
-            // clear input for the next item
+            // Clear input and focus for next item
             input.value = '';
             input.focus();
         }
     });
+}
+
+function updateRecentlyAddedItems() {
+    const container = document.getElementById('recentlyAddedItems');
+    const list = document.getElementById('recentItemsList');
+    const count = document.getElementById('itemsCount');
+    
+    if (recentlyAddedChecklistItems.length > 0) {
+        container.style.display = 'block';
+        
+        // Update list HTML
+        list.innerHTML = recentlyAddedChecklistItems.map(item => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; align-items: center; flex-grow: 1;">
+                    <i class="fas fa-check-square" style="color: #10b981; margin-right: 8px; font-size: 12px;"></i>
+                    <span style="font-size: 13px; color: #334155;">${sanitize(item.title)}</span>
+                </div>
+                <span style="font-size: 11px; color: #94a3b8;">${item.timestamp}</span>
+            </div>
+        `).join('');
+        
+        // Update count
+        count.textContent = `${recentlyAddedChecklistItems.length} item${recentlyAddedChecklistItems.length !== 1 ? 's' : ''} added`;
+    } else {
+        container.style.display = 'none';
+        count.textContent = '0 items added';
+    }
+}
+
+window.clearRecentItems = function() {
+    recentlyAddedChecklistItems = [];
+    updateRecentlyAddedItems();
+    showToast('Recent items cleared', 'info');
 }
 
 function toggleChecklistItem(taskId, isCompleted) {

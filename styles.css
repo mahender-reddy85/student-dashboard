@@ -1057,6 +1057,25 @@ body {
     transition: all 0.2s ease;
 }
 
+/* Dark mode for recently added items */
+[data-theme="dark"] #recentItemsList {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+[data-theme="dark"] #recentItemsList > div {
+    background: #334155;
+    border-color: #475569;
+}
+
+[data-theme="dark"] #recentItemsList > div span {
+    color: #f1f5f9;
+}
+
+[data-theme="dark"] #recentItemsList > div span:last-child {
+    color: #94a3b8;
+}
+
 .card-header {
     display: flex;
     justify-content: space-between;
