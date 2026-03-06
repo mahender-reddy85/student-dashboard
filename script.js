@@ -150,7 +150,7 @@ function hideToast(toastElement) {
 }
 
 // Database Functions
-async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], isChecklist = false) {
+async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], isChecklist = false, completed = false) {
     try {
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
@@ -169,7 +169,8 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
                 updatedAt: new Date().getTime(),
                 userId: currentUserId,
                 subtasks: subtasks,
-                isChecklist: isChecklist
+                isChecklist: isChecklist,
+                completed: completed
             };
             tasks.push(newTask);
             localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
@@ -197,7 +198,8 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             updatedAt: serverTimestamp(),
             userId: currentUserId,
             subtasks: subtasks,
-            isChecklist: isChecklist
+            isChecklist: isChecklist,
+            completed: completed
         });
 
         // Return the document reference with the generated ID
@@ -355,7 +357,9 @@ async function loadTasksFromDatabase() {
                 pinned: data.pinned || false,
                 userId: data.userId || currentUserId,
                 subtasks: data.subtasks || [],
-                order: data.order || 0
+                order: data.order || 0,
+                isChecklist: data.isChecklist || false,
+                completed: data.completed || false
             };
 
             // Add to state
@@ -1703,7 +1707,9 @@ async function duplicateTask(id) {
         newTask.dueDate,
         newTask.description,
         newTask.priority,
-        newTask.subtasks || []
+        newTask.subtasks || [],
+        newTask.isChecklist,
+        newTask.completed
     );
 
     if (docRef) {
@@ -1752,7 +1758,9 @@ function deleteTask(id) {
                         task.dueDate,
                         task.description,
                         task.priority,
-                        task.subtasks || []
+                        task.subtasks || [],
+                        task.isChecklist,
+                        task.completed
                     );
 
                     if (docRef) {
