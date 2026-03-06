@@ -851,8 +851,9 @@ function renderBoard() {
                 task.title.toLowerCase().includes(state.filterQuery.toLowerCase()) ||
                 (task.description && task.description.toLowerCase().includes(state.filterQuery.toLowerCase()));
 
-            // Filter by priority
+            // Filter by priority or checklist
             const matchesPriority = state.priorityFilter === 'all' ||
+                (state.priorityFilter === 'checklist' && task.isChecklist) ||
                 (task.priority && task.priority.toLowerCase() === state.priorityFilter);
 
             return matchesSearch && matchesPriority;
