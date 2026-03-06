@@ -1001,6 +1001,68 @@ function createTaskCard(task) {
     return card;
 }
 
+// --- Keyboard Shortcuts ---
+function handleKeyboardShortcuts(e) {
+    // Don't trigger if typing in an input or textarea
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+        return;
+    }
+
+    // Close modal with Escape
+    if (e.key === 'Escape') {
+        if (document.getElementById('modalOverlay') && document.getElementById('modalOverlay').style.display === 'flex') {
+            closeModal();
+        } else if (document.getElementById('deleteConfirmModal') && document.getElementById('deleteConfirmModal').style.display === 'flex') {
+            hideDeleteConfirmation();
+        } else if (document.getElementById('keyboardShortcutsModal') && document.getElementById('keyboardShortcutsModal').style.display === 'flex') {
+            document.getElementById('keyboardShortcutsModal').style.display = 'none';
+        }
+        return;
+    }
+
+    // Only process single key shortcuts when not in an input field
+    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable)) {
+        return;
+    }
+
+    // Show keyboard shortcuts help with ?
+    if (e.key === '?') {
+        const modal = document.getElementById('keyboardShortcutsModal');
+        if (modal) {
+            e.preventDefault();
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+        return;
+    }
+
+    // Focus search with /
+    if (e.key === '/') {
+        e.preventDefault();
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+        }
+        return;
+    }
+
+    // New task with N
+    if (e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        const addButtons = document.querySelectorAll('.add-task-btn');
+        if (addButtons.length > 0) {
+            addButtons[0].click(); // Click the first "Add Task" button
+        }
+        return;
+    }
+
+    // Toggle theme with T
+    if (e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        ThemeManager.toggleTheme();
+        return;
+    }
+}
+
 // --- Event Handlers ---
 function setupEventListeners() {
     // Prevent default drag behaviors
