@@ -991,473 +991,474 @@ function createTaskCard(task) {
             </div>` : ''}
         </div>
     `;
-
-        // Set up inline editing after card is created (only for non-checklist items)
-        if (!isChecklist) {
-            setupInlineEditing(card, task);
-        }
-
-        return card;
     }
 
-    // --- Event Handlers ---
-    function setupEventListeners() {
-        // Prevent default drag behaviors
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
+    // Set up inline editing after card is created (only for non-checklist items)
+    if (!isChecklist) {
+        setupInlineEditing(card, task);
+    }
+
+    return card;
+}
+
+// --- Event Handlers ---
+function setupEventListeners() {
+    // Prevent default drag behaviors
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Add keyboard event listener
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+
+    // Sort button
+    document.getElementById('sortByDate')?.addEventListener('click', toggleSortOrder);
+
+    // Add/Edit Task delegators
+    DOM.board.addEventListener('click', async (e) => {
+        const addBtn = e.target.closest('.add-task-btn');
+        if (addBtn) openModal(null, addBtn.dataset.status);
+
+        const checklistBtn = e.target.closest('.add-checklist-btn');
+        if (checklistBtn) createChecklistItem(checklistBtn.dataset.status);
+
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) openModal(editBtn.dataset.id);
+
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) showDeleteConfirmation(deleteBtn.dataset.id);
+
+        const duplicateBtn = e.target.closest('.duplicate-btn');
+        if (duplicateBtn) await duplicateTask(duplicateBtn.dataset.id);
+
+        const pinBtn = e.target.closest('.pin-btn') || e.target.closest('.pin-btn i');
+        if (pinBtn) {
+            const btn = pinBtn.closest('.pin-btn');
+            if (btn) togglePin(btn.dataset.id);
         }
+    });
 
-        // Add keyboard event listener
-        document.addEventListener('keydown', handleKeyboardShortcuts);
-
-        // Sort button
-        document.getElementById('sortByDate')?.addEventListener('click', toggleSortOrder);
-
-        // Add/Edit Task delegators
-        DOM.board.addEventListener('click', async (e) => {
-            const addBtn = e.target.closest('.add-task-btn');
-            if (addBtn) openModal(null, addBtn.dataset.status);
-
-            const checklistBtn = e.target.closest('.add-checklist-btn');
-            if (checklistBtn) createChecklistItem(checklistBtn.dataset.status);
-
-            const editBtn = e.target.closest('.edit-btn');
-            if (editBtn) openModal(editBtn.dataset.id);
-
-            const deleteBtn = e.target.closest('.delete-btn');
-            if (deleteBtn) showDeleteConfirmation(deleteBtn.dataset.id);
-
-            const duplicateBtn = e.target.closest('.duplicate-btn');
-            if (duplicateBtn) await duplicateTask(duplicateBtn.dataset.id);
-
-            const pinBtn = e.target.closest('.pin-btn') || e.target.closest('.pin-btn i');
-            if (pinBtn) {
-                const btn = pinBtn.closest('.pin-btn');
-                if (btn) togglePin(btn.dataset.id);
-            }
-        });
-
-        // Search
-        if (DOM.searchInput) {
-            DOM.searchInput.addEventListener('input', (e) => {
-                state.filterQuery = e.target.value;
-                renderBoard();
-            });
-        }
-
-        // Priority filter
-        const priorityFilter = document.getElementById('priorityFilter');
-        if (priorityFilter) {
-            priorityFilter.addEventListener('change', (e) => {
-                state.priorityFilter = e.target.value;
-                renderBoard();
-            });
-        }
-
-        // Modal
-        if (DOM.modal) {
-            DOM.closeModal?.addEventListener('click', closeModal);
-            DOM.modal.addEventListener('click', (e) => {
-                if (e.target === DOM.modal) closeModal();
-            });
-        }
-
-        // Form submission
-        if (DOM.form) {
-            DOM.form.addEventListener('submit', handleFormSubmit);
-        }
-
-        // Theme toggle is handled by ThemeManager.init()
-        // No need to add another event listener here
-
-        // Clear Board Confirmation
-        const clearBoardModal = document.getElementById('clearBoardModal');
-        const confirmClearBtn = document.getElementById('confirmClearBoard');
-        const cancelClearBtn = document.getElementById('cancelClearBoard');
-
-        function showClearBoardConfirmation() {
-            clearBoardModal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function hideClearBoardConfirmation() {
-            clearBoardModal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-
-        async function clearBoard() {
-            // Set flag to prevent reloading during clear operation
-            isClearingOrUndoing = true;
-
-            // Store current tasks for potential undo
-            const previousTasks = [...state.tasks];
-
-            // Clear board
-            state.tasks = [];
-
-            // Clear database for skip auth users
-            if (currentUserId === 'skip-auth-user') {
-                localStorage.removeItem('skip-auth-tasks');
-            } else {
-                // For authenticated users, delete all tasks from Firestore using batch
-                try {
-                    const batch = writeBatch(db);
-                    const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
-
-                    querySnapshot.forEach((doc) => {
-                        batch.delete(doc.ref);
-                    });
-
-                    await batch.commit();
-                } catch (error) {
-                    console.error("Error clearing tasks from Firestore:", error);
-                    showToast('Failed to clear all tasks from database', 'error');
-                    // Restore tasks on error
-                    state.tasks = previousTasks;
-                    isClearingOrUndoing = false;
-                    return;
-                }
-            }
-
+    // Search
+    if (DOM.searchInput) {
+        DOM.searchInput.addEventListener('input', (e) => {
+            state.filterQuery = e.target.value;
             renderBoard();
-            hideClearBoardConfirmation();
-
-            // Show toast with undo option
-            showToast(
-                'Board cleared',
-                'error',
-                5000,
-                async () => {
-                    // Set flag to prevent reloading during undo operation
-                    isClearingOrUndoing = true;
-
-                    // Undo clear action
-                    state.tasks = previousTasks;
-
-                    // Restore database for skip auth users
-                    if (currentUserId === 'skip-auth-user') {
-                        localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
-                    } else {
-                        // For authenticated users, restore all tasks to Firestore
-                        try {
-                            const batch = writeBatch(db);
-
-                            previousTasks.forEach((task) => {
-                                const docRef = doc(db, "users", currentUserId, "tasks", task.id);
-                                batch.set(docRef, {
-                                    title: task.title,
-                                    status: task.status,
-                                    dueDate: task.dueDate ? new Date(task.dueDate) : null,
-                                    description: task.description || '',
-                                    priority: task.priority || 'medium',
-                                    pinned: task.pinned || false,
-                                    userId: currentUserId,
-                                    subtasks: task.subtasks || [],
-                                    createdAt: task.createdAt ? new Date(task.createdAt) : serverTimestamp(),
-                                    updatedAt: serverTimestamp()
-                                });
-                            });
-
-                            await batch.commit();
-                        } catch (error) {
-                            console.error("Error restoring tasks to Firestore:", error);
-                            showToast('Failed to restore tasks', 'error');
-                        }
-                    }
-
-                    renderBoard();
-                    showToast('Board restored', 'success');
-
-                    // Clear flag after a short delay to allow undo to complete
-                    setTimeout(() => {
-                        isClearingOrUndoing = false;
-                    }, 500);
-                }
-            );
-
-            // Clear flag after a short delay
-            setTimeout(() => {
-                isClearingOrUndoing = false;
-            }, 500);
-        }
-
-        // Clear Board Button
-        if (DOM.clearBtn) {
-            DOM.clearBtn.addEventListener('click', showClearBoardConfirmation);
-        }
-
-        if (confirmClearBtn && cancelClearBtn) {
-            confirmClearBtn.addEventListener('click', clearBoard);
-            cancelClearBtn.addEventListener('click', hideClearBoardConfirmation);
-        }
-
-        // Close modal when clicking outside
-        if (clearBoardModal) {
-            clearBoardModal.addEventListener('click', (e) => {
-                if (e.target === clearBoardModal) {
-                    hideClearBoardConfirmation();
-                }
-            });
-        }
-
-        // Keyboard
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeModal();
-                hideDeleteConfirmation();
-                hideClearBoardConfirmation();
-            }
-        });
-    } // Added missing closing brace for setupEventListeners function
-
-    // --- Checklist Management ---
-    function createChecklistItem(status) {
-        const taskText = prompt('Enter checklist item:');
-        if (!taskText || taskText.trim() === '') return;
-
-        const checklistTask = {
-            id: Date.now().toString(),
-            title: taskText.trim(),
-            description: '',
-            priority: 'low',
-            status: status,
-            dueDate: '',
-            completed: false,
-            isChecklist: true,
-            userId: currentUserId,
-            subtasks: [],
-            createdAt: Date.now()
-        };
-
-        // Save to database
-        saveTaskToDatabase(
-            checklistTask.title,
-            checklistTask.status,
-            checklistTask.dueDate,
-            checklistTask.description,
-            checklistTask.priority,
-            checklistTask.subtasks,
-            checklistTask.isChecklist
-        ).then(docRef => {
-            if (docRef) {
-                checklistTask.id = docRef.id;
-                showToast('Checklist item added', 'success');
-                renderBoard();
-            }
         });
     }
 
-    function toggleChecklistItem(taskId, isCompleted) {
-        const task = state.tasks.find(t => t.id === taskId);
-        if (task) {
-            task.completed = isCompleted;
-
-            // Update in database
-            updateTaskInDatabase(taskId, {
-                completed: isCompleted,
-                userId: currentUserId
-            });
-
-            // Update visual state
-            const card = document.querySelector(`[data-task-id="${taskId}"]`);
-            if (card) {
-                const textElement = card.querySelector('.checklist-text');
-                if (textElement) {
-                    if (isCompleted) {
-                        textElement.classList.add('completed');
-                    } else {
-                        textElement.classList.remove('completed');
-                    }
-                }
-            }
-
-            showToast(isCompleted ? 'Checklist item completed' : 'Checklist item unchecked', 'success');
-        }
+    // Priority filter
+    const priorityFilter = document.getElementById('priorityFilter');
+    if (priorityFilter) {
+        priorityFilter.addEventListener('change', (e) => {
+            state.priorityFilter = e.target.value;
+            renderBoard();
+        });
     }
 
-    // --- Modal Management ---
-    function openModal(taskId = null, status = 'todo') {
-        document.getElementById('modalTitle').innerText = taskId ? 'Edit Task' : 'Create New Task';
+    // Modal
+    if (DOM.modal) {
+        DOM.closeModal?.addEventListener('click', closeModal);
+        DOM.modal.addEventListener('click', (e) => {
+            if (e.target === DOM.modal) closeModal();
+        });
+    }
 
-        // Reset form
-        const form = document.getElementById('taskForm');
-        form.reset();
-        form.dataset.id = taskId || '';
+    // Form submission
+    if (DOM.form) {
+        DOM.form.addEventListener('submit', handleFormSubmit);
+    }
 
-        // Set status
-        document.getElementById('taskStatus').value = status;
+    // Theme toggle is handled by ThemeManager.init()
+    // No need to add another event listener here
 
-        // If editing, populate form with task data
-        if (taskId) {
-            const task = state.tasks.find(t => t.id === taskId);
-            if (task) {
-                document.getElementById('taskTitle').value = task.title || '';
-                document.getElementById('taskDesc').value = task.description || '';
-                document.getElementById('taskPriority').value = task.priority || 'medium';
-                document.getElementById('taskDueDate').value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+    // Clear Board Confirmation
+    const clearBoardModal = document.getElementById('clearBoardModal');
+    const confirmClearBtn = document.getElementById('confirmClearBoard');
+    const cancelClearBtn = document.getElementById('cancelClearBoard');
 
-                // Populate subtasks
-                const subtasksContainer = document.getElementById('subtasksContainer');
-                subtasksContainer.innerHTML = '';
-                if (task.subtasks && task.subtasks.length > 0) {
-                    task.subtasks.forEach((subtask, index) => {
-                        const subtaskEl = createSubtaskElement(subtask, index);
-                        if (subtaskEl) {
-                            subtasksContainer.appendChild(subtaskEl);
-                        }
-                    });
-                }
-            }
-        } else {
-            // Clear subtasks for new task
-            document.getElementById('subtasksContainer').innerHTML = '';
-        }
-
-        // Show modal
-        DOM.modal.style.display = 'flex';
+    function showClearBoardConfirmation() {
+        clearBoardModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-
-        // Focus first input
-        document.getElementById('taskTitle').focus();
     }
 
-    function closeModal() {
-        DOM.modal.style.display = 'none';
+    function hideClearBoardConfirmation() {
+        clearBoardModal.style.display = 'none';
         document.body.style.overflow = '';
     }
 
-    async function handleFormSubmit(e) {
-        e.preventDefault();
+    async function clearBoard() {
+        // Set flag to prevent reloading during clear operation
+        isClearingOrUndoing = true;
 
-        const form = e.target;
-        const id = form.dataset.id || Date.now().toString();
-        const title = form.elements['title'].value.trim();
-        const description = form.elements['description'].value.trim();
-        const priority = form.elements['priority'].value;
-        const status = form.elements['status'].value;
-        const dueDate = form.elements['dueDate'].value;
+        // Store current tasks for potential undo
+        const previousTasks = [...state.tasks];
 
-        // Get current subtasks from UI
-        const currentSubtasks = getSubtasksFromUI();
+        // Clear board
+        state.tasks = [];
 
-        // Convert dueDate to timestamp for database
-        const dueDateTimestamp = dueDate ? new Date(dueDate).getTime() : null;
-
-        // Find existing task or create new one
-        const existingTask = state.tasks.find(t => t.id === id);
-        const taskData = {
-            id,
-            title: title || 'Untitled Task',
-            description: description || '',
-            priority,
-            status,
-            dueDate: dueDateTimestamp,
-            pinned: existingTask?.pinned || false,
-            subtasks: currentSubtasks.length > 0 ? currentSubtasks : (existingTask?.subtasks || []),
-            userId: currentUserId,
-            updatedAt: Date.now()
-        };
-
-        if (existingTask) {
-            // Update existing task
-            Object.assign(existingTask, taskData);
-            // Update in database
-            updateTaskInDatabase(id, taskData);
-            showToast('Task updated', 'success');
+        // Clear database for skip auth users
+        if (currentUserId === 'skip-auth-user') {
+            localStorage.removeItem('skip-auth-tasks');
         } else {
-            // Add new task
-            const docRef = await saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
+            // For authenticated users, delete all tasks from Firestore using batch
+            try {
+                const batch = writeBatch(db);
+                const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
 
-            if (docRef) {
-                // Update local task with the correct Firestore ID
-                taskData.id = docRef.id;
-                taskData.createdAt = Date.now(); // Temporary until next refresh
-                state.tasks.push(taskData);
-                showToast('Task created', 'success');
-            } else {
-                showToast('Failed to create task', 'error');
+                querySnapshot.forEach((doc) => {
+                    batch.delete(doc.ref);
+                });
+
+                await batch.commit();
+            } catch (error) {
+                console.error("Error clearing tasks from Firestore:", error);
+                showToast('Failed to clear all tasks from database', 'error');
+                // Restore tasks on error
+                state.tasks = previousTasks;
+                isClearingOrUndoing = false;
+                return;
             }
         }
 
-        // saveState(); // DISABLED - Using database
         renderBoard();
-        closeModal();
+        hideClearBoardConfirmation();
+
+        // Show toast with undo option
+        showToast(
+            'Board cleared',
+            'error',
+            5000,
+            async () => {
+                // Set flag to prevent reloading during undo operation
+                isClearingOrUndoing = true;
+
+                // Undo clear action
+                state.tasks = previousTasks;
+
+                // Restore database for skip auth users
+                if (currentUserId === 'skip-auth-user') {
+                    localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
+                } else {
+                    // For authenticated users, restore all tasks to Firestore
+                    try {
+                        const batch = writeBatch(db);
+
+                        previousTasks.forEach((task) => {
+                            const docRef = doc(db, "users", currentUserId, "tasks", task.id);
+                            batch.set(docRef, {
+                                title: task.title,
+                                status: task.status,
+                                dueDate: task.dueDate ? new Date(task.dueDate) : null,
+                                description: task.description || '',
+                                priority: task.priority || 'medium',
+                                pinned: task.pinned || false,
+                                userId: currentUserId,
+                                subtasks: task.subtasks || [],
+                                createdAt: task.createdAt ? new Date(task.createdAt) : serverTimestamp(),
+                                updatedAt: serverTimestamp()
+                            });
+                        });
+
+                        await batch.commit();
+                    } catch (error) {
+                        console.error("Error restoring tasks to Firestore:", error);
+                        showToast('Failed to restore tasks', 'error');
+                    }
+                }
+
+                renderBoard();
+                showToast('Board restored', 'success');
+
+                // Clear flag after a short delay to allow undo to complete
+                setTimeout(() => {
+                    isClearingOrUndoing = false;
+                }, 500);
+            }
+        );
+
+        // Clear flag after a short delay
+        setTimeout(() => {
+            isClearingOrUndoing = false;
+        }, 500);
     }
 
-    // --- Inline Editing ---
-    function setupInlineEditing(card, task) {
-        const titleElement = card.querySelector('.card-title');
-        const titleText = titleElement.querySelector('.card-title-text');
-        const titleInput = titleElement.querySelector('.card-title-edit');
+    // Clear Board Button
+    if (DOM.clearBtn) {
+        DOM.clearBtn.addEventListener('click', showClearBoardConfirmation);
+    }
 
-        // Double click to edit
-        titleElement.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            startEditing();
-        });
+    if (confirmClearBtn && cancelClearBtn) {
+        confirmClearBtn.addEventListener('click', clearBoard);
+        cancelClearBtn.addEventListener('click', hideClearBoardConfirmation);
+    }
 
-        // Handle Enter key to start editing
-        titleElement.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                startEditing();
+    // Close modal when clicking outside
+    if (clearBoardModal) {
+        clearBoardModal.addEventListener('click', (e) => {
+            if (e.target === clearBoardModal) {
+                hideClearBoardConfirmation();
             }
         });
+    }
 
-        function startEditing() {
-            // Show input and hide text
-            titleText.style.display = 'none';
-            titleInput.style.display = 'block';
-            titleInput.focus();
-            titleInput.select();
+    // Keyboard
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+            hideDeleteConfirmation();
+            hideClearBoardConfirmation();
+        }
+    });
+} // Added missing closing brace for setupEventListeners function
 
-            // Select all text in the input
-            titleInput.setSelectionRange(0, titleInput.value.length);
+// --- Checklist Management ---
+function createChecklistItem(status) {
+    const taskText = prompt('Enter checklist item:');
+    if (!taskText || taskText.trim() === '') return;
+
+    const checklistTask = {
+        id: Date.now().toString(),
+        title: taskText.trim(),
+        description: '',
+        priority: 'low',
+        status: status,
+        dueDate: '',
+        completed: false,
+        isChecklist: true,
+        userId: currentUserId,
+        subtasks: [],
+        createdAt: Date.now()
+    };
+
+    // Save to database
+    saveTaskToDatabase(
+        checklistTask.title,
+        checklistTask.status,
+        checklistTask.dueDate,
+        checklistTask.description,
+        checklistTask.priority,
+        checklistTask.subtasks,
+        checklistTask.isChecklist
+    ).then(docRef => {
+        if (docRef) {
+            checklistTask.id = docRef.id;
+            showToast('Checklist item added', 'success');
+            renderBoard();
+        }
+    });
+}
+
+function toggleChecklistItem(taskId, isCompleted) {
+    const task = state.tasks.find(t => t.id === taskId);
+    if (task) {
+        task.completed = isCompleted;
+
+        // Update in database
+        updateTaskInDatabase(taskId, {
+            completed: isCompleted,
+            userId: currentUserId
+        });
+
+        // Update visual state
+        const card = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (card) {
+            const textElement = card.querySelector('.checklist-text');
+            if (textElement) {
+                if (isCompleted) {
+                    textElement.classList.add('completed');
+                } else {
+                    textElement.classList.remove('completed');
+                }
+            }
         }
 
-        function saveEdit() {
-            const newTitle = titleInput.value.trim();
-            if (newTitle && newTitle !== task.title) {
-                task.title = newTitle;
-                titleText.textContent = newTitle || '/';
-                // Update in database
-                updateTaskInDatabase(task.id, { title: newTitle, userId: currentUserId });
-                showToast('Task updated', 'success');
-            }
+        showToast(isCompleted ? 'Checklist item completed' : 'Checklist item unchecked', 'success');
+    }
+}
 
-            // Reset UI
+// --- Modal Management ---
+function openModal(taskId = null, status = 'todo') {
+    document.getElementById('modalTitle').innerText = taskId ? 'Edit Task' : 'Create New Task';
+
+    // Reset form
+    const form = document.getElementById('taskForm');
+    form.reset();
+    form.dataset.id = taskId || '';
+
+    // Set status
+    document.getElementById('taskStatus').value = status;
+
+    // If editing, populate form with task data
+    if (taskId) {
+        const task = state.tasks.find(t => t.id === taskId);
+        if (task) {
+            document.getElementById('taskTitle').value = task.title || '';
+            document.getElementById('taskDesc').value = task.description || '';
+            document.getElementById('taskPriority').value = task.priority || 'medium';
+            document.getElementById('taskDueDate').value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+
+            // Populate subtasks
+            const subtasksContainer = document.getElementById('subtasksContainer');
+            subtasksContainer.innerHTML = '';
+            if (task.subtasks && task.subtasks.length > 0) {
+                task.subtasks.forEach((subtask, index) => {
+                    const subtaskEl = createSubtaskElement(subtask, index);
+                    if (subtaskEl) {
+                        subtasksContainer.appendChild(subtaskEl);
+                    }
+                });
+            }
+        }
+    } else {
+        // Clear subtasks for new task
+        document.getElementById('subtasksContainer').innerHTML = '';
+    }
+
+    // Show modal
+    DOM.modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Focus first input
+    document.getElementById('taskTitle').focus();
+}
+
+function closeModal() {
+    DOM.modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+async function handleFormSubmit(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const id = form.dataset.id || Date.now().toString();
+    const title = form.elements['title'].value.trim();
+    const description = form.elements['description'].value.trim();
+    const priority = form.elements['priority'].value;
+    const status = form.elements['status'].value;
+    const dueDate = form.elements['dueDate'].value;
+
+    // Get current subtasks from UI
+    const currentSubtasks = getSubtasksFromUI();
+
+    // Convert dueDate to timestamp for database
+    const dueDateTimestamp = dueDate ? new Date(dueDate).getTime() : null;
+
+    // Find existing task or create new one
+    const existingTask = state.tasks.find(t => t.id === id);
+    const taskData = {
+        id,
+        title: title || 'Untitled Task',
+        description: description || '',
+        priority,
+        status,
+        dueDate: dueDateTimestamp,
+        pinned: existingTask?.pinned || false,
+        subtasks: currentSubtasks.length > 0 ? currentSubtasks : (existingTask?.subtasks || []),
+        userId: currentUserId,
+        updatedAt: Date.now()
+    };
+
+    if (existingTask) {
+        // Update existing task
+        Object.assign(existingTask, taskData);
+        // Update in database
+        updateTaskInDatabase(id, taskData);
+        showToast('Task updated', 'success');
+    } else {
+        // Add new task
+        const docRef = await saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
+
+        if (docRef) {
+            // Update local task with the correct Firestore ID
+            taskData.id = docRef.id;
+            taskData.createdAt = Date.now(); // Temporary until next refresh
+            state.tasks.push(taskData);
+            showToast('Task created', 'success');
+        } else {
+            showToast('Failed to create task', 'error');
+        }
+    }
+
+    // saveState(); // DISABLED - Using database
+    renderBoard();
+    closeModal();
+}
+
+// --- Inline Editing ---
+function setupInlineEditing(card, task) {
+    const titleElement = card.querySelector('.card-title');
+    const titleText = titleElement.querySelector('.card-title-text');
+    const titleInput = titleElement.querySelector('.card-title-edit');
+
+    // Double click to edit
+    titleElement.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        startEditing();
+    });
+
+    // Handle Enter key to start editing
+    titleElement.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            startEditing();
+        }
+    });
+
+    function startEditing() {
+        // Show input and hide text
+        titleText.style.display = 'none';
+        titleInput.style.display = 'block';
+        titleInput.focus();
+        titleInput.select();
+
+        // Select all text in the input
+        titleInput.setSelectionRange(0, titleInput.value.length);
+    }
+
+    function saveEdit() {
+        const newTitle = titleInput.value.trim();
+        if (newTitle && newTitle !== task.title) {
+            task.title = newTitle;
+            titleText.textContent = newTitle || '/';
+            // Update in database
+            updateTaskInDatabase(task.id, { title: newTitle, userId: currentUserId });
+            showToast('Task updated', 'success');
+        }
+
+        // Reset UI
+        titleText.style.display = 'block';
+        titleInput.style.display = 'none';
+    }
+
+    // Handle Enter/ESC keys in input
+    titleInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit();
+        } else if (e.key === 'Escape') {
+            // Reset to original value
+            titleInput.value = task.title || '';
             titleText.style.display = 'block';
             titleInput.style.display = 'none';
         }
+    });
 
-        // Handle Enter/ESC keys in input
-        titleInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveEdit();
-            } else if (e.key === 'Escape') {
-                // Reset to original value
-                titleInput.value = task.title || '';
-                titleText.style.display = 'block';
-                titleInput.style.display = 'none';
-            }
-        });
+    // Save on blur
+    titleInput.addEventListener('blur', () => {
+        // Use setTimeout to let click events process first
+        setTimeout(saveEdit, 200);
+    });
+}
 
-        // Save on blur
-        titleInput.addEventListener('blur', () => {
-            // Use setTimeout to let click events process first
-            setTimeout(saveEdit, 200);
-        });
-    }
+// --- Subtasks Management ---
+function createSubtaskElement(subtask, index) {
+    const subtaskEl = document.createElement('div');
+    subtaskEl.className = 'subtask';
+    subtaskEl.dataset.index = index;
 
-    // --- Subtasks Management ---
-    function createSubtaskElement(subtask, index) {
-        const subtaskEl = document.createElement('div');
-        subtaskEl.className = 'subtask';
-        subtaskEl.dataset.index = index;
-
-        subtaskEl.innerHTML = `
+    subtaskEl.innerHTML = `
         <label class="subtask-label">
             <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
             <span class="checkmark"></span>
@@ -1468,274 +1469,274 @@ function createTaskCard(task) {
         </button>
     `;
 
-        // Add event listener for checkbox changes
-        const checkbox = subtaskEl.querySelector('input[type="checkbox"]');
-        const deleteBtn = subtaskEl.querySelector('.delete-subtask');
+    // Add event listener for checkbox changes
+    const checkbox = subtaskEl.querySelector('input[type="checkbox"]');
+    const deleteBtn = subtaskEl.querySelector('.delete-subtask');
 
-        if (checkbox) {
-            checkbox.addEventListener('change', async (e) => {
-                const taskId = document.getElementById('taskId')?.value;
-                if (taskId) {
-                    const task = state.tasks.find(t => t.id === taskId);
-                    if (task && task.subtasks) {
-                        task.subtasks[index].completed = e.target.checked;
-                        // Update in database with new subtasks array
-                        updateTaskInDatabase(taskId, {
-                            subtasks: task.subtasks,
-                            userId: currentUserId
-                        });
-                        showToast(e.target.checked ? 'Subtask completed' : 'Subtask unchecked', 'success');
-                    }
+    if (checkbox) {
+        checkbox.addEventListener('change', async (e) => {
+            const taskId = document.getElementById('taskId')?.value;
+            if (taskId) {
+                const task = state.tasks.find(t => t.id === taskId);
+                if (task && task.subtasks) {
+                    task.subtasks[index].completed = e.target.checked;
+                    // Update in database with new subtasks array
+                    updateTaskInDatabase(taskId, {
+                        subtasks: task.subtasks,
+                        userId: currentUserId
+                    });
+                    showToast(e.target.checked ? 'Subtask completed' : 'Subtask unchecked', 'success');
                 }
-            });
-        }
-
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', async () => {
-                const taskId = document.getElementById('taskId')?.value;
-                if (taskId) {
-                    const task = state.tasks.find(t => t.id === taskId);
-                    if (task && task.subtasks) {
-                        task.subtasks.splice(index, 1);
-                        // Update in database with new subtasks array
-                        updateTaskInDatabase(taskId, {
-                            subtasks: task.subtasks,
-                            userId: currentUserId
-                        });
-                        // Re-render subtasks in modal
-                        const subtasksContainer = document.getElementById('subtasksContainer');
-                        subtasksContainer.innerHTML = '';
-                        task.subtasks.forEach((subtask, i) => {
-                            const subtaskEl = createSubtaskElement(subtask, i);
-                            if (subtaskEl) {
-                                subtasksContainer.appendChild(subtaskEl);
-                            }
-                        });
-                        showToast('Subtask deleted', 'success');
-                    }
-                }
-            });
-        }
-
-        return subtaskEl;
-    }
-
-    function addSubtask(text, completed = false) {
-        const subtasksContainer = document.getElementById('subtasksContainer');
-        const subtask = { text, completed };
-        const subtaskEl = createSubtaskElement(subtask, subtasksContainer.children.length);
-        if (subtaskEl) {
-            subtasksContainer.appendChild(subtaskEl);
-        }
-
-        // Clear input and focus it
-        const input = document.getElementById('newSubtaskInput');
-        input.value = '';
-        input.focus();
-    }
-
-    function getSubtasksFromUI() {
-        const subtasks = [];
-        const subtaskElements = document.querySelectorAll('#subtasksContainer .subtask');
-
-        subtaskElements.forEach(el => {
-            const textEl = el.querySelector('.subtask-text');
-            const checkbox = el.querySelector('input[type="checkbox"]');
-            if (textEl && checkbox) {
-                subtasks.push({
-                    text: textEl.textContent,
-                    completed: checkbox.checked
-                });
             }
         });
-
-        return subtasks;
     }
 
-    // --- Task Deletion ---
-    let taskToDelete = null;
-
-    function showDeleteConfirmation(id) {
-        taskToDelete = id;
-        const modal = document.getElementById('deleteConfirmModal');
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-
-    function hideDeleteConfirmation() {
-        const modal = document.getElementById('deleteConfirmModal');
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-        taskToDelete = null;
-    }
-
-    // Toggle task pinned status
-    function togglePin(id) {
-        const task = state.tasks.find(t => t.id === id);
-        if (task) {
-            task.pinned = !task.pinned;
-            // Update in database
-            updateTaskInDatabase(id, { pinned: task.pinned, userId: currentUserId });
-            renderBoard();
-            showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
-        }
-    }
-
-    async function duplicateTask(id) {
-        const taskToDuplicate = state.tasks.find(task => task.id === id);
-        if (!taskToDuplicate) return;
-
-        // Create a deep copy of task
-        const newTask = JSON.parse(JSON.stringify(taskToDuplicate));
-
-        // Generate a new ID and reset timestamps
-        newTask.id = Date.now().toString();
-        delete newTask.createdAt;
-        delete newTask.updatedAt;
-
-        // Add "(Copy)" to title if it doesn't already have it
-        if (!newTask.title.includes(' (Copy)')) {
-            newTask.title = `${newTask.title} (Copy)`;
-        }
-
-        // Remove files array if it exists
-        delete newTask.files;
-
-        // Add new task to beginning of tasks array
-        state.tasks.unshift(newTask);
-
-        // Save to database and update with correct ID
-        const docRef = await saveTaskToDatabase(
-            newTask.title,
-            newTask.status,
-            newTask.dueDate,
-            newTask.description,
-            newTask.priority,
-            newTask.subtasks || []
-        );
-
-        if (docRef) {
-            // Update local task with the correct Firestore ID
-            newTask.id = docRef.id;
-            newTask.createdAt = Date.now(); // Temporary until next refresh
-        }
-
-        renderBoard();
-
-        // Show success toast
-        showToast('Task duplicated', 'success');
-    }
-
-    function deleteTask(id) {
-        const taskToDelete = state.tasks.find(task => task.id === id);
-        if (!taskToDelete) return;
-
-        state.lastDeletedTask = { ...taskToDelete, deletedAt: Date.now() };
-
-        // Remove task from local state
-        state.tasks = state.tasks.filter(task => task.id !== id);
-
-        // Delete from database
-        deleteTaskFromDatabase(id);
-
-        renderBoard();
-        hideDeleteConfirmation();
-
-        // Show toast with undo option
-        showToast(
-            'Task deleted',
-            'error',
-            5000,
-            async () => {
-                // Undo delete action
-                if (state.lastDeletedTask) {
-                    // Remove the deletedAt property before adding back
-                    const { deletedAt, ...task } = state.lastDeletedTask;
-
-                    try {
-                        // Restore to database first
-                        const docRef = await saveTaskToDatabase(
-                            task.title,
-                            task.status,
-                            task.dueDate,
-                            task.description,
-                            task.priority,
-                            task.subtasks || []
-                        );
-
-                        if (docRef) {
-                            // Update local task with the correct Firestore ID
-                            task.id = docRef.id;
-                            task.createdAt = Date.now(); // Temporary until next refresh
-                            state.tasks.push(task);
-                            renderBoard();
-                            showToast('Task restored', 'success');
-                            state.lastDeletedTask = null;
-                        } else {
-                            showToast('Failed to restore task', 'error');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async () => {
+            const taskId = document.getElementById('taskId')?.value;
+            if (taskId) {
+                const task = state.tasks.find(t => t.id === taskId);
+                if (task && task.subtasks) {
+                    task.subtasks.splice(index, 1);
+                    // Update in database with new subtasks array
+                    updateTaskInDatabase(taskId, {
+                        subtasks: task.subtasks,
+                        userId: currentUserId
+                    });
+                    // Re-render subtasks in modal
+                    const subtasksContainer = document.getElementById('subtasksContainer');
+                    subtasksContainer.innerHTML = '';
+                    task.subtasks.forEach((subtask, i) => {
+                        const subtaskEl = createSubtaskElement(subtask, i);
+                        if (subtaskEl) {
+                            subtasksContainer.appendChild(subtaskEl);
                         }
-                    } catch (error) {
-                        console.error('Undo restore error:', error);
-                        showToast('Failed to restore task', 'error');
-                    }
+                    });
+                    showToast('Subtask deleted', 'success');
                 }
             }
-        );
+        });
     }
 
-    // --- Utility Functions ---
-    function sanitize(html) {
-        const div = document.createElement('div');
-        div.textContent = html;
-        return div.innerHTML;
+    return subtaskEl;
+}
+
+function addSubtask(text, completed = false) {
+    const subtasksContainer = document.getElementById('subtasksContainer');
+    const subtask = { text, completed };
+    const subtaskEl = createSubtaskElement(subtask, subtasksContainer.children.length);
+    if (subtaskEl) {
+        subtasksContainer.appendChild(subtaskEl);
     }
 
-    // Initialize the app when the DOM is loaded
-    document.addEventListener('DOMContentLoaded', () => {
-        // Initialize the application first
-        init();
+    // Clear input and focus it
+    const input = document.getElementById('newSubtaskInput');
+    input.value = '';
+    input.focus();
+}
 
-        // Set up delete confirmation
-        const confirmDeleteBtn = document.getElementById('confirmDelete');
-        if (confirmDeleteBtn) {
-            confirmDeleteBtn.addEventListener('click', () => {
-                if (taskToDelete) {
-                    deleteTask(taskToDelete);
-                    hideDeleteConfirmation();
-                }
+function getSubtasksFromUI() {
+    const subtasks = [];
+    const subtaskElements = document.querySelectorAll('#subtasksContainer .subtask');
+
+    subtaskElements.forEach(el => {
+        const textEl = el.querySelector('.subtask-text');
+        const checkbox = el.querySelector('input[type="checkbox"]');
+        if (textEl && checkbox) {
+            subtasks.push({
+                text: textEl.textContent,
+                completed: checkbox.checked
             });
         }
+    });
 
-        // Set up cancel delete button
-        const cancelDeleteBtn = document.getElementById('cancelDelete');
-        if (cancelDeleteBtn) {
-            cancelDeleteBtn.addEventListener('click', hideDeleteConfirmation);
+    return subtasks;
+}
+
+// --- Task Deletion ---
+let taskToDelete = null;
+
+function showDeleteConfirmation(id) {
+    taskToDelete = id;
+    const modal = document.getElementById('deleteConfirmModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function hideDeleteConfirmation() {
+    const modal = document.getElementById('deleteConfirmModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    taskToDelete = null;
+}
+
+// Toggle task pinned status
+function togglePin(id) {
+    const task = state.tasks.find(t => t.id === id);
+    if (task) {
+        task.pinned = !task.pinned;
+        // Update in database
+        updateTaskInDatabase(id, { pinned: task.pinned, userId: currentUserId });
+        renderBoard();
+        showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
+    }
+}
+
+async function duplicateTask(id) {
+    const taskToDuplicate = state.tasks.find(task => task.id === id);
+    if (!taskToDuplicate) return;
+
+    // Create a deep copy of task
+    const newTask = JSON.parse(JSON.stringify(taskToDuplicate));
+
+    // Generate a new ID and reset timestamps
+    newTask.id = Date.now().toString();
+    delete newTask.createdAt;
+    delete newTask.updatedAt;
+
+    // Add "(Copy)" to title if it doesn't already have it
+    if (!newTask.title.includes(' (Copy)')) {
+        newTask.title = `${newTask.title} (Copy)`;
+    }
+
+    // Remove files array if it exists
+    delete newTask.files;
+
+    // Add new task to beginning of tasks array
+    state.tasks.unshift(newTask);
+
+    // Save to database and update with correct ID
+    const docRef = await saveTaskToDatabase(
+        newTask.title,
+        newTask.status,
+        newTask.dueDate,
+        newTask.description,
+        newTask.priority,
+        newTask.subtasks || []
+    );
+
+    if (docRef) {
+        // Update local task with the correct Firestore ID
+        newTask.id = docRef.id;
+        newTask.createdAt = Date.now(); // Temporary until next refresh
+    }
+
+    renderBoard();
+
+    // Show success toast
+    showToast('Task duplicated', 'success');
+}
+
+function deleteTask(id) {
+    const taskToDelete = state.tasks.find(task => task.id === id);
+    if (!taskToDelete) return;
+
+    state.lastDeletedTask = { ...taskToDelete, deletedAt: Date.now() };
+
+    // Remove task from local state
+    state.tasks = state.tasks.filter(task => task.id !== id);
+
+    // Delete from database
+    deleteTaskFromDatabase(id);
+
+    renderBoard();
+    hideDeleteConfirmation();
+
+    // Show toast with undo option
+    showToast(
+        'Task deleted',
+        'error',
+        5000,
+        async () => {
+            // Undo delete action
+            if (state.lastDeletedTask) {
+                // Remove the deletedAt property before adding back
+                const { deletedAt, ...task } = state.lastDeletedTask;
+
+                try {
+                    // Restore to database first
+                    const docRef = await saveTaskToDatabase(
+                        task.title,
+                        task.status,
+                        task.dueDate,
+                        task.description,
+                        task.priority,
+                        task.subtasks || []
+                    );
+
+                    if (docRef) {
+                        // Update local task with the correct Firestore ID
+                        task.id = docRef.id;
+                        task.createdAt = Date.now(); // Temporary until next refresh
+                        state.tasks.push(task);
+                        renderBoard();
+                        showToast('Task restored', 'success');
+                        state.lastDeletedTask = null;
+                    } else {
+                        showToast('Failed to restore task', 'error');
+                    }
+                } catch (error) {
+                    console.error('Undo restore error:', error);
+                    showToast('Failed to restore task', 'error');
+                }
+            }
         }
+    );
+}
 
-        document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
+// --- Utility Functions ---
+function sanitize(html) {
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
+// Initialize the app when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize the application first
+    init();
+
+    // Set up delete confirmation
+    const confirmDeleteBtn = document.getElementById('confirmDelete');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (taskToDelete) {
+                deleteTask(taskToDelete);
+                hideDeleteConfirmation();
+            }
+        });
+    }
+
+    // Set up cancel delete button
+    const cancelDeleteBtn = document.getElementById('cancelDelete');
+    if (cancelDeleteBtn) {
+        cancelDeleteBtn.addEventListener('click', hideDeleteConfirmation);
+    }
+
+    document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
+        const input = document.getElementById('newSubtaskInput');
+        if (input.value.trim()) {
+            addSubtask(input.value.trim());
+        }
+    });
+
+    document.getElementById('newSubtaskInput')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
             const input = document.getElementById('newSubtaskInput');
             if (input.value.trim()) {
                 addSubtask(input.value.trim());
             }
-        });
-
-        document.getElementById('newSubtaskInput')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const input = document.getElementById('newSubtaskInput');
-                if (input.value.trim()) {
-                    addSubtask(input.value.trim());
-                }
-            }
-        });
-
-        document.getElementById('subtasksContainer')?.addEventListener('click', (e) => {
-            const deleteBtn = e.target.closest('.delete-subtask');
-            if (deleteBtn) {
-                const subtaskEl = deleteBtn.closest('.subtask');
-                if (subtaskEl) {
-                    subtaskEl.remove();
-                }
-            }
-        });
+        }
     });
+
+    document.getElementById('subtasksContainer')?.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.delete-subtask');
+        if (deleteBtn) {
+            const subtaskEl = deleteBtn.closest('.subtask');
+            if (subtaskEl) {
+                subtaskEl.remove();
+            }
+        }
+    });
+});
