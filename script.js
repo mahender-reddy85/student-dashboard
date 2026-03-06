@@ -214,9 +214,15 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         // Return the document reference with the generated ID
         return docRef;
     } catch (error) {
-        console.error("Database save error:", error);
+        handleDatabaseError(error, 'save task');
         return null;
     }
+}
+
+// Centralized error handling
+function handleDatabaseError(error, operation) {
+    console.error(`Database ${operation} error:`, error);
+    showToast(`Failed to ${operation}. Please try again.`, 'error');
 }
 
 async function updateTaskInDatabase(taskId, taskData) {
@@ -379,6 +385,7 @@ async function loadTasksFromDatabase() {
         renderBoard();
     } catch (error) {
         console.error("Database load error:", error);
+        showToast('Failed to load tasks', 'error');
     }
 }
 

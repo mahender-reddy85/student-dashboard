@@ -4,7 +4,6 @@
     "description": "A modern Kanban board with database backend for student task management",
     "main": "index.html",
     "scripts": {
-        "start": "python -m http.server 8080",
         "deploy": "firebase deploy --only hosting"
     },
     "dependencies": {},
