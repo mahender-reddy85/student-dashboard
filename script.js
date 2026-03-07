@@ -1067,14 +1067,16 @@ function getFileIcon(filename) {
 function createTaskCard(task) {
     const card = document.createElement('div');
     const isChecklist = task.isChecklist || false;
+
     card.className = `task-card ${task.pinned ? 'pinned' : ''} ${isChecklist ? 'checklist-item' : ''}`;
     card.draggable = true;
-    card.dataset.taskId = task.id;
+    card.dataset.id = task.id;
 
-    // Check if task is overdue
+    // Overdue check
     if (task.dueDate && task.status !== 'done') {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
         const dueDate = new Date(task.dueDate);
         dueDate.setHours(0, 0, 0, 0);
 
@@ -1083,71 +1085,90 @@ function createTaskCard(task) {
         }
     }
 
-    card.draggable = true;
-    card.dataset.id = task.id;
-
-    // Set up inline editing after card is created (only for non-checklist items)
-    if (!isChecklist) {
-        setTimeout(() => {
-            setupInlineEditing(card, task);
-        }
-
-            , 0);
-    }
-
-    // Format due date
-    let dueDateText = '';
-
-    if (task.dueDate) {
-        const date = new Date(task.dueDate);
-        dueDateText = `• Due ${date.toLocaleDateString()}`;
-    }
-
-    // Calculate progress for subtasks (only for non-checklist items)
-    let progressHTML = '';
-
-    if (!isChecklist && task.subtasks && task.subtasks.length > 0) {
-        const completedCount = task.subtasks.filter(st => st.completed).length;
-        const progressPercent = (completedCount / task.subtasks.length) * 100;
-        progressHTML = ` <div class="subtask-progress"><div class="progress-bar"><div class="progress" style="width: ${progressPercent}%"></div></div><div class="progress-text">${completedCount} of ${task.subtasks.length} tasks </div></div><div class="subtask-list">${task.subtasks.map(subtask => `
- <div class="subtask-preview"><span class="subtask-checkbox ${subtask.completed ? 'completed' : ''}">${subtask.completed ? '✓' : ''} </span><span class="subtask-text ${subtask.completed ? 'completed' : ''}">${sanitize(subtask.text)} </span></div>`).join('')
-            }
-
-	</div>`;
-    }
-
     if (isChecklist) {
-        // Checklist item with checkbox
-        card.innerHTML = ` <div class="checklist-content"><label class="checklist-label"><input type="checkbox" class="checklist-checkbox"${task.completed ? 'checked' : ''} onchange="toggleChecklistItem('${task.id}', this.checked)"><span class="checklist-mark"></span><span class="checklist-text ${task.completed ? 'completed' : ''}">${sanitize(task.title)}</span></label><div class="card-actions"><button class="icon-btn delete-btn" data-id="${task.id}" title="Delete"><i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i></button></div></div>`;
-    }
 
-    else {
-        // Regular task card
-        card.innerHTML = ` <div class="card-header"><div class="card-title" tabindex="0"><span class="card-title-text">${sanitize(task.title) || '/'}</span><input type="text" class="card-title-edit" value="${sanitize(task.title) || ''}" style="display: none;"></div><div class="card-actions"><button class="icon-btn pin-btn ${task.pinned ? 'pinned' : ''}" data-id="${task.id}" title="${task.pinned ? 'Unpin' : 'Pin'}"><i class="fas fa-thumbtack" style="color: ${task.pinned ? '#f59e0b' : '#94a3b8'}; font-size: 13px;"></i></button><button class="icon-btn duplicate-btn" data-id="${task.id}" title="Duplicate"><i class="fas fa-copy" style="color: #94a3b8; font-size: 13px;"></i></button><button class="icon-btn edit-btn" data-id="${task.id}" title="Edit"><i class="fas fa-pencil-alt" style="color: #94a3b8; font-size: 13px;"></i></button><button class="icon-btn delete-btn" data-id="${task.id}" title="Delete"><i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i></button></div></div>${task.description ? `<div class="card-desc">${sanitize(task.description)}</div>` : ''
-            }
+        card.innerHTML = `
+        <div class="checklist-content">
+            <label class="checklist-label">
+                <input type="checkbox" class="checklist-checkbox"
+                    ${task.completed ? 'checked' : ''}
+                    onchange="toggleChecklistItem('${task.id}', this.checked)">
+                <span class="checklist-mark"></span>
 
-< !-- Subtask Progress -->${task.subtasks?.length > 0 ? `
- <div class="subtask-progress"><div class="progress-bar"><div class="progress" style="width: ${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%"></div></div><div class="progress-text">${task.subtasks.filter(st => st.completed).length} of ${task.subtasks.length} tasks </div></div>` : ''
-            }
+                <span class="checklist-text ${task.completed ? 'completed' : ''}">
+                    ${sanitize(task.title)}
+                </span>
+            </label>
 
-<div class="card-footer"><span class="priority-badge priority-${task.priority || 'medium'}">${(task.priority || 'medium').toUpperCase()} </span>${task.dueDate ? `
- <div class="card-date"><i class="far fa-calendar-alt"></i>${new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                }
+            <div class="card-actions">
+                <button class="icon-btn delete-btn" data-id="${task.id}" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        `;
 
-</div>` : ''
-            }
+    } else {
 
-</div>`;
-    }
+        const completed = task.subtasks?.filter(s => s.completed).length || 0;
+        const total = task.subtasks?.length || 0;
+        const percent = total ? (completed / total) * 100 : 0;
 
-    // Set up inline editing after card is created (only for non-checklist items)
-    if (!isChecklist) {
+        card.innerHTML = `
+        <div class="card-header">
+            <div class="card-title" tabindex="0">
+                <span class="card-title-text">${sanitize(task.title) || '/'}</span>
+                <input type="text" class="card-title-edit"
+                       value="${sanitize(task.title) || ''}" style="display:none;">
+            </div>
+
+            <div class="card-actions">
+                <button class="icon-btn pin-btn ${task.pinned ? 'pinned' : ''}" data-id="${task.id}">
+                    <i class="fas fa-thumbtack"></i>
+                </button>
+
+                <button class="icon-btn duplicate-btn" data-id="${task.id}">
+                    <i class="fas fa-copy"></i>
+                </button>
+
+                <button class="icon-btn edit-btn" data-id="${task.id}">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+
+                <button class="icon-btn delete-btn" data-id="${task.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        ${task.description ? `<div class="card-desc">${sanitize(task.description)}</div>` : ''}
+
+        ${total > 0 ? `
+        <div class="subtask-progress">
+            <div class="progress-bar">
+                <div class="progress" style="width:${percent}%"></div>
+            </div>
+            <div class="progress-text">${completed} of ${total} tasks</div>
+        </div>` : ''}
+
+        <div class="card-footer">
+            <span class="priority-badge priority-${task.priority || 'medium'}">
+                ${(task.priority || 'medium').toUpperCase()}
+            </span>
+
+            ${task.dueDate ? `
+            <div class="card-date">
+                <i class="far fa-calendar-alt"></i>
+                ${new Date(task.dueDate).toLocaleDateString()}
+            </div>` : ''}
+        </div>
+        `;
+
         setupInlineEditing(card, task);
     }
 
     return card;
 }
-
 // --- Keyboard Shortcuts ---
 function handleKeyboardShortcuts(e) {
 
