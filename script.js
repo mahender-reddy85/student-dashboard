@@ -22,12 +22,15 @@ function updateGlobalVariables() {
     if (window.currentUserId !== undefined) {
         currentUserId = window.currentUserId;
     }
+
     if (window.db !== undefined) {
         db = window.db;
     }
+
     if (window.writeBatch !== undefined) {
         writeBatch = window.writeBatch;
     }
+
     if (window.Timestamp !== undefined) {
         Timestamp = window.Timestamp;
     }
@@ -37,11 +40,14 @@ function updateGlobalVariables() {
 setInterval(updateGlobalVariables, 100);
 
 const state = {
+
     tasks: [],
     theme: (() => {
         try {
             return localStorage.getItem('kanbanflow_theme') || 'light';
-        } catch (error) {
+        }
+
+        catch (error) {
             console.error('Error accessing localStorage:', error);
             return 'light';
         }
@@ -50,7 +56,9 @@ const state = {
     priorityFilter: 'all',
     sortOrder: 'none',
     lastDeletedTask: null
-};
+}
+
+    ;
 
 // Toast Notification System
 function showToast(message, type = 'info', duration = 5000, undoAction = null) {
@@ -62,6 +70,7 @@ function showToast(message, type = 'info', duration = 5000, undoAction = null) {
     toast.id = toastId;
 
     let icon = 'ℹ️';
+
     switch (type) {
         case 'success':
             icon = '✅';
@@ -74,11 +83,9 @@ function showToast(message, type = 'info', duration = 5000, undoAction = null) {
             break;
     }
 
-    toast.innerHTML = `
-        <span class="toast-message">${icon} ${message}</span>
-        ${undoAction ? `<button class="toast-undo" id="${toastId}-undo">Undo</button>` : ''}
-        <button class="toast-close" id="${toastId}-close">&times;</button>
-    `;
+    toast.innerHTML = ` <span class="toast-message">${icon} ${message}</span>${undoAction ? `<button class="toast-undo" id="${toastId}-undo">Undo</button>` : ''}
+ <button class="toast-close" id="${toastId}-close">×
+	</button>`;
 
     container.appendChild(toast);
 
@@ -89,28 +96,36 @@ function showToast(message, type = 'info', duration = 5000, undoAction = null) {
 
     // Set up close button
     const closeBtn = document.getElementById(`${toastId}-close`);
+
     if (closeBtn) {
         closeBtn.onclick = () => {
             hideToast(toast);
-        };
+        }
+
+            ;
     }
 
     // Set up undo button if applicable
     if (undoAction) {
         const undoBtn = document.getElementById(`${toastId}-undo`);
+
         if (undoBtn) {
             undoBtn.onclick = async (e) => {
                 e.stopPropagation();
                 await undoAction();
                 hideToast(toast);
-            };
+            }
+
+                ;
         }
     }
 
     // Auto-hide after duration
     const timeoutId = setTimeout(() => {
         hideToast(toast);
-    }, duration);
+    }
+
+        , duration);
 
     // Store timeout ID on the toast element for cleanup
     toast.timeoutId = timeoutId;
@@ -124,7 +139,9 @@ function showToast(message, type = 'info', duration = 5000, undoAction = null) {
     toast.addEventListener('mouseleave', () => {
         toast.timeoutId = setTimeout(() => {
             hideToast(toast);
-        }, 1000);
+        }
+
+            , 1000);
     });
 
     return toast;
@@ -146,12 +163,15 @@ function hideToast(toastElement) {
         if (toastElement && toastElement.parentNode) {
             toastElement.parentNode.removeChild(toastElement);
         }
-    }, 300);
+    }
+
+        , 300);
 }
 
 // Database Functions
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], isChecklist = false, completed = false) {
     try {
+
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
             // Use localStorage for skip auth users
@@ -176,10 +196,17 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
                 subtasks: subtasks,
                 isChecklist: isChecklist,
                 completed: completed
-            };
+            }
+
+                ;
             tasks.push(newTask);
             localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
-            return { id: newTask.id };
+
+            return {
+                id: newTask.id
+            }
+
+                ;
         }
 
         // Check if currentUserId is valid before accessing Firestore
@@ -213,7 +240,9 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
 
         // Return the document reference with the generated ID
         return docRef;
-    } catch (error) {
+    }
+
+    catch (error) {
         handleDatabaseError(error, 'save task');
         return null;
     }
@@ -227,19 +256,24 @@ function handleDatabaseError(error, operation) {
 
 async function updateTaskInDatabase(taskId, taskData) {
     try {
+
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
             // Use localStorage for skip auth users
             const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             const taskIndex = tasks.findIndex(task => task.id === taskId);
+
             if (taskIndex !== -1) {
                 tasks[taskIndex] = {
                     ...tasks[taskIndex],
                     ...taskData,
                     updatedAt: new Date().getTime()
-                };
+                }
+
+                    ;
                 localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
             }
+
             return;
         }
 
@@ -250,7 +284,12 @@ async function updateTaskInDatabase(taskId, taskData) {
         }
 
         // Convert dueDate to Firestore Timestamp if provided
-        const updateData = { ...taskData };
+        const updateData = {
+            ...taskData
+        }
+
+            ;
+
         if (updateData.dueDate) {
             updateData.dueDate = Timestamp.fromDate(new Date(updateData.dueDate));
         }
@@ -259,8 +298,10 @@ async function updateTaskInDatabase(taskId, taskData) {
 
         // First check if document exists
         const taskDoc = await getDoc(taskRef);
+
         if (!taskDoc.exists()) {
             console.warn(`Task ${taskId} not found in database, creating new document`);
+
             // If document doesn't exist, create it instead
             await setDoc(taskRef, {
                 title: updateData.title || '',
@@ -275,14 +316,19 @@ async function updateTaskInDatabase(taskId, taskData) {
                 userId: currentUserId,
                 subtasks: updateData.subtasks || []
             });
-        } else {
+        }
+
+        else {
+
             // Document exists, update it
             await updateDoc(taskRef, {
                 ...updateData,
                 updatedAt: serverTimestamp()
             });
         }
-    } catch (error) {
+    }
+
+    catch (error) {
         console.error("Database update error:", error);
         showToast('Failed to update task', 'error');
     }
@@ -290,6 +336,7 @@ async function updateTaskInDatabase(taskId, taskData) {
 
 async function deleteTaskFromDatabase(taskId) {
     try {
+
         // Check if user is using skip auth
         if (currentUserId === 'skip-auth-user') {
             // Use localStorage for skip auth users
@@ -307,7 +354,9 @@ async function deleteTaskFromDatabase(taskId) {
 
         const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
-    } catch (error) {
+    }
+
+    catch (error) {
         console.error("Database delete error:", error);
     }
 }
@@ -341,23 +390,30 @@ async function loadTasksFromDatabase() {
         state.tasks = [];
 
         const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
+
         querySnapshot.forEach((doc) => {
             const data = doc.data();
 
             // Handle Firestore Timestamps properly
             const getTimestampValue = (timestamp) => {
                 if (!timestamp) return null;
+
                 if (typeof timestamp.toDate === 'function') {
                     return timestamp.toDate().getTime();
                 }
+
                 if (typeof timestamp === 'number') {
                     return timestamp;
                 }
+
                 if (typeof timestamp === 'string') {
                     return new Date(timestamp).getTime();
                 }
+
                 return new Date(timestamp).getTime();
-            };
+            }
+
+                ;
 
             // Create task object with all fields from database
             const task = {
@@ -375,7 +431,9 @@ async function loadTasksFromDatabase() {
                 order: data.order || 0,
                 isChecklist: data.isChecklist || false,
                 completed: data.completed || false
-            };
+            }
+
+                ;
 
             // Add to state
             state.tasks.push(task);
@@ -383,7 +441,9 @@ async function loadTasksFromDatabase() {
 
         // Render board with loaded tasks
         renderBoard();
-    } catch (error) {
+    }
+
+    catch (error) {
         console.error("Database load error:", error);
         showToast('Failed to load tasks', 'error');
     }
@@ -392,7 +452,9 @@ async function loadTasksFromDatabase() {
 // Load tasks function for auth state change
 window.loadTasks = function () {
     loadTasksFromDatabase();
-};
+}
+
+    ;
 
 // DOM Elements
 const DOM = {
@@ -403,13 +465,25 @@ const DOM = {
     themeToggle: document.getElementById('themeToggle'),
     clearBtn: document.getElementById('clearBoard'),
     closeModal: document.getElementById('closeModal')
-};
+}
+
+    ;
 
 // Constants
-const COLUMNS = [
-    { id: 'todo', title: '<i class="fas fa-list-ul"></i> To Do' },
-    { id: 'progress', title: '<i class="fas fa-spinner"></i> In Progress' },
-    { id: 'done', title: '<i class="fas fa-check-circle"></i> Done' }
+const COLUMNS = [{
+    id: 'todo', title: '<i class="fas fa-list-ul"></i> To Do'
+}
+
+    ,
+{
+    id: 'progress', title: '<i class="fas fa-spinner"></i> In Progress'
+}
+
+    ,
+{
+    id: 'done', title: '<i class="fas fa-check-circle"></i> Done'
+}
+
 ];
 
 // Initializes the application
@@ -432,7 +506,9 @@ function init() {
         showToast('Welcome to your dashboard!', 'success');
 
         // Note: Tasks will be loaded by auth state change in index.html
-    } catch (error) {
+    }
+
+    catch (error) {
         console.error('Initialization error:', error);
         showToast('Failed to initialize the application', 'error');
     }
@@ -448,7 +524,9 @@ function saveState() {
         // };
         // localStorage.setItem('kanbanflow_state', JSON.stringify(stateToSave));
         console.log('State save skipped - using database');
-    } catch (error) {
+    }
+
+    catch (error) {
         console.error('Failed to save state:', error);
         showToast('Failed to save board state', 'error');
     }
@@ -465,7 +543,9 @@ function loadState() {
         //     state.lastDeletedTask = parsedState.lastDeletedTask || null;
         // }
         console.log('State load skipped - using database');
-    } catch (error) {
+    }
+
+    catch (error) {
         console.error('Failed to load state:', error);
         showToast('Failed to load board state', 'error');
     }
@@ -475,17 +555,20 @@ function loadState() {
 const ThemeManager = (() => {
     const STORAGE_KEY = 'kanbanflow_theme';
     const THEME_ATTR = 'data-theme';
+
     const THEMES = {
         LIGHT: 'light',
         DARK: 'dark'
-    };
+    }
+
+        ;
 
     // DOM Elements
     let themeToggle = null;
 
     /**
-     * Initialize theme management
-     */
+ * Initialize theme management
+ */
     function init() {
         themeToggle = document.getElementById('themeToggle');
 
@@ -500,39 +583,41 @@ const ThemeManager = (() => {
 
         // Listen for system theme changes
         const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
         if (colorSchemeQuery.addEventListener) {
             colorSchemeQuery.addEventListener('change', handleSystemThemeChange);
         }
     }
 
     /**
-     * Get the user's saved theme preference
-     * @returns {string} The saved theme or system preference
-     */
+ * Get the user's saved theme preference
+ * @returns {string} The saved theme or system preference
+ */
     function getSavedThemePreference() {
         try {
             return localStorage.getItem(STORAGE_KEY) || getSystemPreference();
-        } catch (error) {
+        }
+
+        catch (error) {
             console.error('Error accessing localStorage:', error);
             return THEMES.LIGHT;
         }
     }
 
     /**
-     * Get system color scheme preference
-     * @returns {string} 'dark' or 'light'
-     */
+ * Get system color scheme preference
+ * @returns {string} 'dark' or 'light'
+ */
     function getSystemPreference() {
-        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? THEMES.DARK
-            : THEMES.LIGHT;
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? THEMES.DARK : THEMES.LIGHT;
     }
 
     /**
-     * Handle system theme changes
-     * @param {MediaQueryListEvent} event 
-     */
+ * Handle system theme changes
+ * @param {MediaQueryListEvent} event 
+ */
     function handleSystemThemeChange(event) {
+
         // Only apply system theme if user hasn't explicitly set a preference
         if (!localStorage.getItem(STORAGE_KEY)) {
             setTheme(event.matches ? THEMES.DARK : THEMES.LIGHT, false);
@@ -540,8 +625,8 @@ const ThemeManager = (() => {
     }
 
     /**
-     * Toggle between light and dark themes
-     */
+ * Toggle between light and dark themes
+ */
     function toggleTheme() {
         const currentTheme = document.documentElement.getAttribute(THEME_ATTR);
         const newTheme = currentTheme === THEMES.LIGHT ? THEMES.DARK : THEMES.LIGHT;
@@ -549,10 +634,10 @@ const ThemeManager = (() => {
     }
 
     /**
-     * Set the current theme
-     * @param {string} theme - Theme to set ('light' or 'dark')
-     * @param {boolean} savePreference - Whether to save the preference
-     */
+ * Set the current theme
+ * @param {string} theme - Theme to set ('light' or 'dark')
+ * @param {boolean} savePreference - Whether to save the preference
+ */
     function setTheme(theme, savePreference = true) {
 
         if (!Object.values(THEMES).includes(theme)) {
@@ -566,7 +651,9 @@ const ThemeManager = (() => {
         if (savePreference) {
             try {
                 localStorage.setItem(STORAGE_KEY, theme);
-            } catch (error) {
+            }
+
+            catch (error) {
                 console.error('Failed to save theme preference:', error);
             }
         }
@@ -576,9 +663,9 @@ const ThemeManager = (() => {
     }
 
     /**
-     * Update UI elements to reflect the current theme
-     * @param {string} theme - Current theme
-     */
+ * Update UI elements to reflect the current theme
+ * @param {string} theme - Current theme
+ */
     function updateThemeUI(theme) {
         if (!themeToggle) return;
 
@@ -603,7 +690,9 @@ const ThemeManager = (() => {
         getCurrentTheme: () => document.documentElement.getAttribute(THEME_ATTR) || THEMES.LIGHT,
         setTheme,
         toggleTheme: () => toggleTheme() // Ensure we're calling the inner function
-    };
+    }
+
+        ;
 })();
 
 // Initialize theme management when the DOM is loaded
@@ -644,7 +733,9 @@ function compareTasksByDueDate(a, b, order) {
 
         // Default: treat as date object
         return new Date(date);
-    };
+    }
+
+        ;
 
     const dateA = getDateValue(a.dueDate);
     const dateB = getDateValue(b.dueDate);
@@ -666,6 +757,7 @@ function toggleSortOrder() {
 
     // Update button appearance
     const sortButton = document.getElementById('sortByDate');
+
     if (sortButton) {
         sortButton.style.opacity = state.sortOrder === 'none' ? '0.6' : '1';
         sortButton.title = state.sortOrder === 'none' ? 'Sort by due date' :
@@ -696,11 +788,14 @@ function attachDragEvents() {
             // Add visual feedback
             setTimeout(() => {
                 card.classList.add('dragging');
+
                 // Highlight all drop zones
                 dropzones.forEach(zone => {
                     zone.classList.add('drop-zone-active');
                 });
-            }, 0);
+            }
+
+                , 0);
         });
 
         card.addEventListener('dragend', (e) => {
@@ -710,6 +805,7 @@ function attachDragEvents() {
 
             // Remove visual feedback
             card.classList.remove('dragging');
+
             dropzones.forEach(zone => {
                 zone.classList.remove('drop-zone-active');
             });
@@ -717,7 +813,9 @@ function attachDragEvents() {
             // Add small delay to prevent race condition with drag operations
             setTimeout(() => {
                 renderBoard(); // Cleanup and persist
-            }, 50);
+            }
+
+                , 50);
         });
     });
 
@@ -741,16 +839,21 @@ function attachDragEvents() {
             try {
                 if (afterElement) {
                     zone.insertBefore(card, afterElement);
-                } else {
+                }
+
+                else {
                     zone.appendChild(card);
                 }
-            } catch (error) {
+            }
+
+            catch (error) {
                 console.error('Drag and drop error:', error);
                 // Fallback: don't move element
             }
         });
 
         zone.addEventListener('dragleave', (e) => {
+
             // Only remove highlight if leaving the zone entirely
             if (!zone.contains(e.relatedTarget)) {
                 zone.classList.remove('drag-over');
@@ -775,6 +878,7 @@ function attachDragEvents() {
 
             // Update task status in local state
             const task = state.tasks.find(t => t.id === taskId);
+
             if (task) {
                 const statusChanged = oldStatus !== newStatus;
 
@@ -791,6 +895,7 @@ function attachDragEvents() {
                 allCardsInZone.forEach((cardElement, index) => {
                     const cardTaskId = cardElement.dataset.id;
                     const cardTask = state.tasks.find(t => t.id === cardTaskId);
+
                     if (cardTask) {
                         cardTask.order = index;
                     }
@@ -800,7 +905,9 @@ function attachDragEvents() {
                 const updateData = {
                     order: task.order,
                     userId: currentUserId
-                };
+                }
+
+                    ;
 
                 if (statusChanged) {
                     updateData.status = newStatus;
@@ -814,7 +921,9 @@ function attachDragEvents() {
                         'todo': 'To Do',
                         'progress': 'In Progress',
                         'done': 'Done'
-                    };
+                    }
+
+                        ;
                     showToast(`Task moved to ${statusNames[newStatus]}`, 'success');
                 }
             }
@@ -823,6 +932,7 @@ function attachDragEvents() {
             zone.classList.remove('drag-over');
             isDragging = false;
             card.classList.remove('dragging');
+
             dropzones.forEach(dz => {
                 dz.classList.remove('drop-zone-active', 'drag-over');
             });
@@ -838,11 +948,21 @@ function getDragAfterElement(container, y) {
         const offset = y - box.top - box.height / 2;
 
         if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
+            return {
+                offset: offset, element: child
+            }
+
+                ;
+        }
+
+        else {
             return closest;
         }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+        , {
+            offset: Number.NEGATIVE_INFINITY
+        }).element;
 }
 
 function renderBoard() {
@@ -854,14 +974,10 @@ function renderBoard() {
             if (task.status !== col.id) return false;
 
             // Filter by search query
-            const matchesSearch = state.filterQuery === '' ||
-                task.title.toLowerCase().includes(state.filterQuery.toLowerCase()) ||
-                (task.description && task.description.toLowerCase().includes(state.filterQuery.toLowerCase()));
+            const matchesSearch = state.filterQuery === '' || task.title.toLowerCase().includes(state.filterQuery.toLowerCase()) || (task.description && task.description.toLowerCase().includes(state.filterQuery.toLowerCase()));
 
             // Filter by priority or checklist
-            const matchesPriority = state.priorityFilter === 'all' ||
-                (state.priorityFilter === 'checklist' && task.isChecklist) ||
-                (state.priorityFilter !== 'checklist' && !task.isChecklist && task.priority && task.priority.toLowerCase() === state.priorityFilter);
+            const matchesPriority = state.priorityFilter === 'all' || (state.priorityFilter === 'checklist' && task.isChecklist) || (state.priorityFilter !== 'checklist' && !task.isChecklist && task.priority && task.priority.toLowerCase() === state.priorityFilter);
 
             return matchesSearch && matchesPriority;
         });
@@ -889,29 +1005,14 @@ function renderBoard() {
         colEl.className = 'column';
         colEl.dataset.status = col.id;
 
-        colEl.innerHTML = `
-            <div class="column-header">
-                <h3 class="column-title">
-                    ${col.title} <span class="task-count">${columnTasks.length}</span>
-                </h3>
-                <div class="column-actions">
-                    <button class="add-checklist-btn" data-status="${col.id}" title="Add checklist item">
-                        <i class="fas fa-check-square"></i>
-                    </button>
-                    <button class="add-task-btn" data-status="${col.id}" title="Add task">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="task-list" data-status="${col.id}">
-                ${columnTasks.length === 0 ? '<div class="empty-state">No tasks here</div>' : ''}
-            </div>
-        `;
+        colEl.innerHTML = ` <div class="column-header" > <h3 class="column-title" > ${col.title} <span class="task-count" >${columnTasks.length}</span> </h3> <div class="column-actions" > <button class="add-checklist-btn" data-status="${col.id}" title="Add checklist item" > <i class="fas fa-check-square" ></i> </button> <button class="add-task-btn" data-status="${col.id}" title="Add task" > <i class="fas fa-plus" ></i> </button> </div> </div> <div class="task-list" data-status="${col.id}" > ${columnTasks.length === 0 ? '<div class="empty-state">No tasks here</div>' : ''} </div> `;
 
         if (columnTasks.length > 0) {
             const listEl = colEl.querySelector('.task-list');
+
             columnTasks.forEach(task => {
                 const taskCard = createTaskCard(task);
+
                 if (taskCard) {
                     listEl.appendChild(taskCard);
                 }
@@ -926,6 +1027,7 @@ function renderBoard() {
 
 function getFileIcon(filename) {
     const ext = filename.split('.').pop().toLowerCase();
+
     const icons = {
         // Images
         'jpg': 'fa-file-image',
@@ -955,7 +1057,9 @@ function getFileIcon(filename) {
         'json': 'fa-file-code',
         // Default
         'default': 'fa-file'
-    };
+    }
+
+        ;
 
     return icons[ext] || icons['default'];
 }
@@ -986,11 +1090,14 @@ function createTaskCard(task) {
     if (!isChecklist) {
         setTimeout(() => {
             setupInlineEditing(card, task);
-        }, 0);
+        }
+
+            , 0);
     }
 
     // Format due date
     let dueDateText = '';
+
     if (task.dueDate) {
         const date = new Date(task.dueDate);
         dueDateText = `• Due ${date.toLocaleDateString()}`;
@@ -998,97 +1105,39 @@ function createTaskCard(task) {
 
     // Calculate progress for subtasks (only for non-checklist items)
     let progressHTML = '';
+
     if (!isChecklist && task.subtasks && task.subtasks.length > 0) {
         const completedCount = task.subtasks.filter(st => st.completed).length;
         const progressPercent = (completedCount / task.subtasks.length) * 100;
-        progressHTML = `
-            <div class="subtask-progress">
-                <div class="progress-bar">
-                    <div class="progress" style="width: ${progressPercent}%"></div>
-                </div>
-                <div class="progress-text">
-                    ${completedCount} of ${task.subtasks.length} tasks
-                </div>
-            </div>
-            <div class="subtask-list">
-                ${task.subtasks.map(subtask => `
-                    <div class="subtask-preview">
-                        <span class="subtask-checkbox ${subtask.completed ? 'completed' : ''}">
-                            ${subtask.completed ? '✓' : ''}
-                        </span>
-                        <span class="subtask-text ${subtask.completed ? 'completed' : ''}">
-                            ${sanitize(subtask.text)}
-                        </span>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        progressHTML = ` <div class="subtask-progress"><div class="progress-bar"><div class="progress" style="width: ${progressPercent}%"></div></div><div class="progress-text">${completedCount} of ${task.subtasks.length} tasks </div></div><div class="subtask-list">${task.subtasks.map(subtask => `
+ <div class="subtask-preview"><span class="subtask-checkbox ${subtask.completed ? 'completed' : ''}">${subtask.completed ? '✓' : ''} </span><span class="subtask-text ${subtask.completed ? 'completed' : ''}">${sanitize(subtask.text)} </span></div>`).join('')
+            }
+
+	</div>`;
     }
 
     if (isChecklist) {
         // Checklist item with checkbox
-        card.innerHTML = `
-            <div class="checklist-content">
-                <label class="checklist-label">
-                    <input type="checkbox" class="checklist-checkbox" ${task.completed ? 'checked' : ''} 
-                           onchange="toggleChecklistItem('${task.id}', this.checked)">
-                    <span class="checklist-mark"></span>
-                    <span class="checklist-text ${task.completed ? 'completed' : ''}">${sanitize(task.title)}</span>
-                </label>
-                <div class="card-actions">
-                    <button class="icon-btn delete-btn" data-id="${task.id}" title="Delete">
-                        <i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-    } else {
+        card.innerHTML = ` <div class="checklist-content"><label class="checklist-label"><input type="checkbox" class="checklist-checkbox"${task.completed ? 'checked' : ''} onchange="toggleChecklistItem('${task.id}', this.checked)"><span class="checklist-mark"></span><span class="checklist-text ${task.completed ? 'completed' : ''}">${sanitize(task.title)}</span></label><div class="card-actions"><button class="icon-btn delete-btn" data-id="${task.id}" title="Delete"><i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i></button></div></div>`;
+    }
+
+    else {
         // Regular task card
-        card.innerHTML = `
-            <div class="card-header">
-                <div class="card-title" tabindex="0">
-                    <span class="card-title-text">${sanitize(task.title) || '/'}</span>
-                    <input type="text" class="card-title-edit" value="${sanitize(task.title) || ''}" style="display: none;">
-                </div>
-                <div class="card-actions">
-                    <button class="icon-btn pin-btn ${task.pinned ? 'pinned' : ''}" data-id="${task.id}" title="${task.pinned ? 'Unpin' : 'Pin'}">
-                        <i class="fas fa-thumbtack" style="color: ${task.pinned ? '#f59e0b' : '#94a3b8'}; font-size: 13px;"></i>
-                    </button>
-                    <button class="icon-btn duplicate-btn" data-id="${task.id}" title="Duplicate">
-                        <i class="fas fa-copy" style="color: #94a3b8; font-size: 13px;"></i>
-                    </button>
-                    <button class="icon-btn edit-btn" data-id="${task.id}" title="Edit">
-                        <i class="fas fa-pencil-alt" style="color: #94a3b8; font-size: 13px;"></i>
-                    </button>
-                    <button class="icon-btn delete-btn" data-id="${task.id}" title="Delete">
-                        <i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i>
-                    </button>
-                </div>
-            </div>
-            ${task.description ? `<div class="card-desc">${sanitize(task.description)}</div>` : ''}
-            
-            <!-- Subtask Progress -->
-            ${task.subtasks?.length > 0 ? `
-            <div class="subtask-progress">
-                <div class="progress-bar">
-                    <div class="progress" style="width: ${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%"></div>
-                </div>
-                <div class="progress-text">
-                    ${task.subtasks.filter(st => st.completed).length} of ${task.subtasks.length} tasks
-                </div>
-            </div>` : ''}
-            
-            <div class="card-footer">
-                <span class="priority-badge priority-${task.priority || 'medium'}">
-                ${(task.priority || 'medium').toUpperCase()}
-            </span>
-            ${task.dueDate ? `
-            <div class="card-date">
-                <i class="far fa-calendar-alt"></i>
-                ${new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>` : ''}
-        </div>
-    `;
+        card.innerHTML = ` <div class="card-header"><div class="card-title" tabindex="0"><span class="card-title-text">${sanitize(task.title) || '/'}</span><input type="text" class="card-title-edit" value="${sanitize(task.title) || ''}" style="display: none;"></div><div class="card-actions"><button class="icon-btn pin-btn ${task.pinned ? 'pinned' : ''}" data-id="${task.id}" title="${task.pinned ? 'Unpin' : 'Pin'}"><i class="fas fa-thumbtack" style="color: ${task.pinned ? '#f59e0b' : '#94a3b8'}; font-size: 13px;"></i></button><button class="icon-btn duplicate-btn" data-id="${task.id}" title="Duplicate"><i class="fas fa-copy" style="color: #94a3b8; font-size: 13px;"></i></button><button class="icon-btn edit-btn" data-id="${task.id}" title="Edit"><i class="fas fa-pencil-alt" style="color: #94a3b8; font-size: 13px;"></i></button><button class="icon-btn delete-btn" data-id="${task.id}" title="Delete"><i class="fas fa-trash" style="color: #94a3b8; font-size: 13px;"></i></button></div></div>${task.description ? `<div class="card-desc">${sanitize(task.description)}</div>` : ''
+            }
+
+< !-- Subtask Progress -->${task.subtasks?.length > 0 ? `
+ <div class="subtask-progress"><div class="progress-bar"><div class="progress" style="width: ${(task.subtasks.filter(st => st.completed).length / task.subtasks.length) * 100}%"></div></div><div class="progress-text">${task.subtasks.filter(st => st.completed).length} of ${task.subtasks.length} tasks </div></div>` : ''
+            }
+
+<div class="card-footer"><span class="priority-badge priority-${task.priority || 'medium'}">${(task.priority || 'medium').toUpperCase()} </span>${task.dueDate ? `
+ <div class="card-date"><i class="far fa-calendar-alt"></i>${new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                }
+
+</div>` : ''
+            }
+
+</div>`;
     }
 
     // Set up inline editing after card is created (only for non-checklist items)
@@ -1101,6 +1150,7 @@ function createTaskCard(task) {
 
 // --- Keyboard Shortcuts ---
 function handleKeyboardShortcuts(e) {
+
     // Don't trigger if typing in an input or textarea
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
         return;
@@ -1110,11 +1160,16 @@ function handleKeyboardShortcuts(e) {
     if (e.key === 'Escape') {
         if (document.getElementById('modalOverlay') && document.getElementById('modalOverlay').style.display === 'flex') {
             closeModal();
-        } else if (document.getElementById('deleteConfirmModal') && document.getElementById('deleteConfirmModal').style.display === 'flex') {
+        }
+
+        else if (document.getElementById('deleteConfirmModal') && document.getElementById('deleteConfirmModal').style.display === 'flex') {
             hideDeleteConfirmation();
-        } else if (document.getElementById('keyboardShortcutsModal') && document.getElementById('keyboardShortcutsModal').style.display === 'flex') {
+        }
+
+        else if (document.getElementById('keyboardShortcutsModal') && document.getElementById('keyboardShortcutsModal').style.display === 'flex') {
             document.getElementById('keyboardShortcutsModal').style.display = 'none';
         }
+
         return;
     }
 
@@ -1126,10 +1181,12 @@ function handleKeyboardShortcuts(e) {
     // Show keyboard shortcuts help with ?
     if (e.key === '?') {
         const modal = document.getElementById('keyboardShortcutsModal');
+
         if (modal) {
             e.preventDefault();
             modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
         }
+
         return;
     }
 
@@ -1137,9 +1194,11 @@ function handleKeyboardShortcuts(e) {
     if (e.key === '/') {
         e.preventDefault();
         const searchInput = document.getElementById('searchInput');
+
         if (searchInput) {
             searchInput.focus();
         }
+
         return;
     }
 
@@ -1147,9 +1206,11 @@ function handleKeyboardShortcuts(e) {
     if (e.key.toLowerCase() === 'n') {
         e.preventDefault();
         const addButtons = document.querySelectorAll('.add-task-btn');
+
         if (addButtons.length > 0) {
             addButtons[0].click(); // Click the first "Add Task" button
         }
+
         return;
     }
 
@@ -1163,6 +1224,7 @@ function handleKeyboardShortcuts(e) {
 
 // --- Event Handlers ---
 function setupEventListeners() {
+
     // Prevent default drag behaviors
     function preventDefaults(e) {
         e.preventDefault();
@@ -1184,6 +1246,7 @@ function setupEventListeners() {
         if (checklistBtn) createChecklistItem(checklistBtn.dataset.status);
 
         const editBtn = e.target.closest('.edit-btn');
+
         if (editBtn) {
             const taskId = editBtn.dataset.id;
             const task = state.tasks.find(t => t.id === taskId);
@@ -1198,6 +1261,7 @@ function setupEventListeners() {
         if (duplicateBtn) await duplicateTask(duplicateBtn.dataset.id);
 
         const pinBtn = e.target.closest('.pin-btn') || e.target.closest('.pin-btn i');
+
         if (pinBtn) {
             const btn = pinBtn.closest('.pin-btn');
             if (btn) togglePin(btn.dataset.id);
@@ -1214,6 +1278,7 @@ function setupEventListeners() {
 
     // Priority filter
     const priorityFilter = document.getElementById('priorityFilter');
+
     if (priorityFilter) {
         priorityFilter.addEventListener('change', (e) => {
             state.priorityFilter = e.target.value;
@@ -1224,6 +1289,7 @@ function setupEventListeners() {
     // Modal
     if (DOM.modal) {
         DOM.closeModal?.addEventListener('click', closeModal);
+
         DOM.modal.addEventListener('click', (e) => {
             if (e.target === DOM.modal) closeModal();
         });
@@ -1265,7 +1331,10 @@ function setupEventListeners() {
         // Clear database for skip auth users
         if (currentUserId === 'skip-auth-user') {
             localStorage.removeItem('skip-auth-tasks');
-        } else {
+        }
+
+        else {
+
             // For authenticated users, delete all tasks from Firestore using batch
             try {
                 const batch = writeBatch(db);
@@ -1276,7 +1345,9 @@ function setupEventListeners() {
                 });
 
                 await batch.commit();
-            } catch (error) {
+            }
+
+            catch (error) {
                 console.error("Error clearing tasks from Firestore:", error);
                 showToast('Failed to clear all tasks from database', 'error');
                 // Restore tasks on error
@@ -1290,8 +1361,7 @@ function setupEventListeners() {
         hideClearBoardConfirmation();
 
         // Show toast with undo option
-        showToast(
-            'Board cleared',
+        showToast('Board cleared',
             'error',
             5000,
             async () => {
@@ -1304,13 +1374,17 @@ function setupEventListeners() {
                 // Restore database for skip auth users
                 if (currentUserId === 'skip-auth-user') {
                     localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
-                } else {
+                }
+
+                else {
+
                     // For authenticated users, restore all tasks to Firestore
                     try {
                         const batch = writeBatch(db);
 
                         previousTasks.forEach((task) => {
                             const docRef = doc(db, "users", currentUserId, "tasks", task.id);
+
                             batch.set(docRef, {
                                 title: task.title,
                                 status: task.status,
@@ -1326,7 +1400,9 @@ function setupEventListeners() {
                         });
 
                         await batch.commit();
-                    } catch (error) {
+                    }
+
+                    catch (error) {
                         console.error("Error restoring tasks to Firestore:", error);
                         showToast('Failed to restore tasks', 'error');
                     }
@@ -1338,14 +1414,17 @@ function setupEventListeners() {
                 // Clear flag after a short delay to allow undo to complete
                 setTimeout(() => {
                     isClearingOrUndoing = false;
-                }, 500);
-            }
-        );
+                }
+
+                    , 500);
+            });
 
         // Clear flag after a short delay
         setTimeout(() => {
             isClearingOrUndoing = false;
-        }, 500);
+        }
+
+            , 500);
     }
 
     // Clear Board Button
@@ -1375,7 +1454,9 @@ function setupEventListeners() {
             hideClearBoardConfirmation();
         }
     });
-} // Added missing closing brace for setupEventListeners function
+}
+
+// Added missing closing brace for setupEventListeners function
 
 // --- Checklist Management ---
 let currentChecklistStatus = 'todo';
@@ -1385,6 +1466,7 @@ window.createChecklistItem = function (status) {
     currentChecklistStatus = status;
     recentlyAddedChecklistItems = []; // Reset for new session
     const modal = document.getElementById('checklistModal');
+
     if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -1397,17 +1479,23 @@ window.createChecklistItem = function (status) {
 
         setTimeout(() => {
             document.getElementById('newChecklistInput').focus();
-        }, 100);
+        }
+
+            , 100);
     }
 }
 
 window.closeChecklistModal = function () {
     const modal = document.getElementById('checklistModal');
+
     if (modal) {
+
         // If there are queued items, save them all before closing
         if (recentlyAddedChecklistItems.length > 0) {
             saveQueuedChecklistItems();
-        } else {
+        }
+
+        else {
             // Just close if no items to save
             modal.style.display = 'none';
             document.body.style.overflow = '';
@@ -1420,25 +1508,25 @@ async function saveQueuedChecklistItems() {
     if (recentlyAddedChecklistItems.length === 0) return;
 
     try {
+
         // Save all queued items to database
         const savePromises = recentlyAddedChecklistItems.map(async (item) => {
             const taskData = item.taskData;
-            const docRef = await saveTaskToDatabase(
-                taskData.title,
+            const docRef = await saveTaskToDatabase(taskData.title,
                 taskData.status,
                 taskData.dueDate,
                 taskData.description,
                 taskData.priority,
                 taskData.subtasks,
                 taskData.isChecklist,
-                taskData.completed
-            );
+                taskData.completed);
 
             if (docRef) {
                 // Update with real database ID
                 taskData.id = docRef.id;
                 return taskData;
             }
+
             return null;
         });
 
@@ -1463,7 +1551,9 @@ async function saveQueuedChecklistItems() {
         // Clear the queue
         recentlyAddedChecklistItems = [];
 
-    } catch (error) {
+    }
+
+    catch (error) {
         console.error('Error saving checklist items:', error);
         showToast('Failed to save some checklist items', 'error');
     }
@@ -1487,7 +1577,9 @@ window.saveChecklistItem = function () {
         userId: currentUserId,
         subtasks: [],
         createdAt: Date.now()
-    };
+    }
+
+        ;
 
     // Add to recently added list (for UI display)
     recentlyAddedChecklistItems.push({
@@ -1515,19 +1607,13 @@ function updateRecentlyAddedItems() {
         container.style.display = 'block';
 
         // Update list HTML
-        list.innerHTML = recentlyAddedChecklistItems.map(item => `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: white; border-radius: 4px; border: 1px solid #e2e8f0;">
-                <div style="display: flex; align-items: center; flex-grow: 1;">
-                    <i class="fas fa-clock" style="color: #f59e0b; margin-right: 8px; font-size: 12px;"></i>
-                    <span style="font-size: 13px; color: #334155;">${sanitize(item.title)}</span>
-                </div>
-                <span style="font-size: 11px; color: #94a3b8;">${item.timestamp}</span>
-            </div>
-        `).join('');
+        list.innerHTML = recentlyAddedChecklistItems.map(item => ` <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; margin-bottom: 4px; background: white; border-radius: 4px; border: 1px solid #e2e8f0;" > <div style="display: flex; align-items: center; flex-grow: 1;" > <i class="fas fa-clock" style="color: #f59e0b; margin-right: 8px; font-size: 12px;" ></i> <span style="font-size: 13px; color: #334155;" >${sanitize(item.title)}</span> </div> <span style="font-size: 11px; color: #94a3b8;" >${item.timestamp}</span> </div> `).join('');
 
         // Update count
         count.textContent = `${recentlyAddedChecklistItems.length} item${recentlyAddedChecklistItems.length !== 1 ? 's' : ''} added`;
-    } else {
+    }
+
+    else {
         container.style.display = 'none';
         count.textContent = '0 items added';
     }
@@ -1541,6 +1627,7 @@ window.clearRecentItems = function () {
 
 function toggleChecklistItem(taskId, isCompleted) {
     const task = state.tasks.find(t => t.id === taskId);
+
     if (task) {
         task.completed = isCompleted;
 
@@ -1552,12 +1639,16 @@ function toggleChecklistItem(taskId, isCompleted) {
 
         // Update visual state
         const card = document.querySelector(`[data-task-id="${taskId}"]`);
+
         if (card) {
             const textElement = card.querySelector('.checklist-text');
+
             if (textElement) {
                 if (isCompleted) {
                     textElement.classList.add('completed');
-                } else {
+                }
+
+                else {
                     textElement.classList.remove('completed');
                 }
             }
@@ -1582,6 +1673,7 @@ function openModal(taskId = null, status = 'todo') {
     // If editing, populate form with task data
     if (taskId) {
         const task = state.tasks.find(t => t.id === taskId);
+
         if (task) {
             document.getElementById('taskTitle').value = task.title || '';
             document.getElementById('taskDesc').value = task.description || '';
@@ -1593,16 +1685,20 @@ function openModal(taskId = null, status = 'todo') {
             // Populate subtasks
             const subtasksContainer = document.getElementById('subtasksContainer');
             subtasksContainer.innerHTML = '';
+
             if (task.subtasks && task.subtasks.length > 0) {
                 task.subtasks.forEach((subtask, index) => {
                     const subtaskEl = createSubtaskElement(subtask, index);
+
                     if (subtaskEl) {
                         subtasksContainer.appendChild(subtaskEl);
                     }
                 });
             }
         }
-    } else {
+    }
+
+    else {
         // Clear subtasks for new task
         document.getElementById('subtasksContainer').innerHTML = '';
     }
@@ -1639,6 +1735,7 @@ async function handleFormSubmit(e) {
 
     // Find existing task or create new one
     const existingTask = state.tasks.find(t => t.id === id);
+
     const taskData = {
         id,
         title: title || 'Untitled Task',
@@ -1650,7 +1747,9 @@ async function handleFormSubmit(e) {
         subtasks: currentSubtasks.length > 0 ? currentSubtasks : (existingTask?.subtasks || []),
         userId: currentUserId,
         updatedAt: Date.now()
-    };
+    }
+
+        ;
 
     if (existingTask) {
         // Update existing task
@@ -1658,7 +1757,9 @@ async function handleFormSubmit(e) {
         // Update in database
         updateTaskInDatabase(id, taskData);
         showToast('Task updated', 'success');
-    } else {
+    }
+
+    else {
         // Add new task
         const docRef = await saveTaskToDatabase(title, status, dueDate, description, priority, currentSubtasks);
 
@@ -1668,7 +1769,9 @@ async function handleFormSubmit(e) {
             taskData.createdAt = Date.now(); // Temporary until next refresh
             state.tasks.push(taskData);
             showToast('Task created', 'success');
-        } else {
+        }
+
+        else {
             showToast('Failed to create task', 'error');
         }
     }
@@ -1711,11 +1814,15 @@ function setupInlineEditing(card, task) {
 
     function saveEdit() {
         const newTitle = titleInput.value.trim();
+
         if (newTitle && newTitle !== task.title) {
             task.title = newTitle;
             titleText.textContent = newTitle || '/';
+
             // Update in database
-            updateTaskInDatabase(task.id, { title: newTitle, userId: currentUserId });
+            updateTaskInDatabase(task.id, {
+                title: newTitle, userId: currentUserId
+            });
             showToast('Task updated', 'success');
         }
 
@@ -1729,7 +1836,9 @@ function setupInlineEditing(card, task) {
         if (e.key === 'Enter') {
             e.preventDefault();
             saveEdit();
-        } else if (e.key === 'Escape') {
+        }
+
+        else if (e.key === 'Escape') {
             // Reset to original value
             titleInput.value = task.title || '';
             titleText.style.display = 'block';
@@ -1750,16 +1859,7 @@ function createSubtaskElement(subtask, index) {
     subtaskEl.className = 'subtask';
     subtaskEl.dataset.index = index;
 
-    subtaskEl.innerHTML = `
-        <label class="subtask-label">
-            <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
-            <span class="checkmark"></span>
-            <span class="subtask-text">${sanitize(subtask.text)}</span>
-        </label>
-        <button class="icon-btn delete-subtask" title="Delete subtask">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
+    subtaskEl.innerHTML = ` <label class="subtask-label"><input type="checkbox"${subtask.completed ? 'checked' : ''}><span class="checkmark"></span><span class="subtask-text">${sanitize(subtask.text)}</span></label><button class="icon-btn delete-subtask" title="Delete subtask"><i class="fas fa-times"></i></button>`;
 
     // Add event listener for checkbox changes
     const checkbox = subtaskEl.querySelector('input[type="checkbox"]');
@@ -1768,10 +1868,13 @@ function createSubtaskElement(subtask, index) {
     if (checkbox) {
         checkbox.addEventListener('change', async (e) => {
             const taskId = document.getElementById('taskId')?.value;
+
             if (taskId) {
                 const task = state.tasks.find(t => t.id === taskId);
+
                 if (task && task.subtasks) {
                     task.subtasks[index].completed = e.target.checked;
+
                     // Update in database with new subtasks array
                     updateTaskInDatabase(taskId, {
                         subtasks: task.subtasks,
@@ -1786,10 +1889,13 @@ function createSubtaskElement(subtask, index) {
     if (deleteBtn) {
         deleteBtn.addEventListener('click', async () => {
             const taskId = document.getElementById('taskId')?.value;
+
             if (taskId) {
                 const task = state.tasks.find(t => t.id === taskId);
+
                 if (task && task.subtasks) {
                     task.subtasks.splice(index, 1);
+
                     // Update in database with new subtasks array
                     updateTaskInDatabase(taskId, {
                         subtasks: task.subtasks,
@@ -1798,8 +1904,10 @@ function createSubtaskElement(subtask, index) {
                     // Re-render subtasks in modal
                     const subtasksContainer = document.getElementById('subtasksContainer');
                     subtasksContainer.innerHTML = '';
+
                     task.subtasks.forEach((subtask, i) => {
                         const subtaskEl = createSubtaskElement(subtask, i);
+
                         if (subtaskEl) {
                             subtasksContainer.appendChild(subtaskEl);
                         }
@@ -1815,8 +1923,15 @@ function createSubtaskElement(subtask, index) {
 
 function addSubtask(text, completed = false) {
     const subtasksContainer = document.getElementById('subtasksContainer');
-    const subtask = { text, completed };
+
+    const subtask = {
+        text,
+        completed
+    }
+
+        ;
     const subtaskEl = createSubtaskElement(subtask, subtasksContainer.children.length);
+
     if (subtaskEl) {
         subtasksContainer.appendChild(subtaskEl);
     }
@@ -1834,6 +1949,7 @@ function getSubtasksFromUI() {
     subtaskElements.forEach(el => {
         const textEl = el.querySelector('.subtask-text');
         const checkbox = el.querySelector('input[type="checkbox"]');
+
         if (textEl && checkbox) {
             subtasks.push({
                 text: textEl.textContent,
@@ -1865,10 +1981,14 @@ function hideDeleteConfirmation() {
 // Toggle task pinned status
 function togglePin(id) {
     const task = state.tasks.find(t => t.id === id);
+
     if (task) {
         task.pinned = !task.pinned;
+
         // Update in database
-        updateTaskInDatabase(id, { pinned: task.pinned, userId: currentUserId });
+        updateTaskInDatabase(id, {
+            pinned: task.pinned, userId: currentUserId
+        });
         renderBoard();
         showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
     }
@@ -1898,16 +2018,14 @@ async function duplicateTask(id) {
     state.tasks.unshift(newTask);
 
     // Save to database and update with correct ID
-    const docRef = await saveTaskToDatabase(
-        newTask.title,
+    const docRef = await saveTaskToDatabase(newTask.title,
         newTask.status,
         newTask.dueDate,
         newTask.description,
         newTask.priority,
         newTask.subtasks || [],
         newTask.isChecklist,
-        newTask.completed
-    );
+        newTask.completed);
 
     if (docRef) {
         // Update local task with the correct Firestore ID
@@ -1925,7 +2043,12 @@ function deleteTask(id) {
     const taskToDelete = state.tasks.find(task => task.id === id);
     if (!taskToDelete) return;
 
-    state.lastDeletedTask = { ...taskToDelete, deletedAt: Date.now() };
+    state.lastDeletedTask = {
+        ...taskToDelete,
+        deletedAt: Date.now()
+    }
+
+        ;
 
     // Remove task from local state
     state.tasks = state.tasks.filter(task => task.id !== id);
@@ -1937,28 +2060,31 @@ function deleteTask(id) {
     hideDeleteConfirmation();
 
     // Show toast with undo option
-    showToast(
-        'Task deleted',
+    showToast('Task deleted',
         'error',
         5000,
         async () => {
+
             // Undo delete action
             if (state.lastDeletedTask) {
+
                 // Remove the deletedAt property before adding back
-                const { deletedAt, ...task } = state.lastDeletedTask;
+                const {
+                    deletedAt, ...task
+                }
+
+                    = state.lastDeletedTask;
 
                 try {
                     // Restore to database first
-                    const docRef = await saveTaskToDatabase(
-                        task.title,
+                    const docRef = await saveTaskToDatabase(task.title,
                         task.status,
                         task.dueDate,
                         task.description,
                         task.priority,
                         task.subtasks || [],
                         task.isChecklist,
-                        task.completed
-                    );
+                        task.completed);
 
                     if (docRef) {
                         // Update local task with the correct Firestore ID
@@ -1968,16 +2094,19 @@ function deleteTask(id) {
                         renderBoard();
                         showToast('Task restored', 'success');
                         state.lastDeletedTask = null;
-                    } else {
+                    }
+
+                    else {
                         showToast('Failed to restore task', 'error');
                     }
-                } catch (error) {
+                }
+
+                catch (error) {
                     console.error('Undo restore error:', error);
                     showToast('Failed to restore task', 'error');
                 }
             }
-        }
-    );
+        });
 }
 
 // --- Utility Functions ---
@@ -1994,6 +2123,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set up delete confirmation
     const confirmDeleteBtn = document.getElementById('confirmDelete');
+
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', () => {
             if (taskToDelete) {
@@ -2005,12 +2135,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Set up cancel delete button
     const cancelDeleteBtn = document.getElementById('cancelDelete');
+
     if (cancelDeleteBtn) {
         cancelDeleteBtn.addEventListener('click', hideDeleteConfirmation);
     }
 
     document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
         const input = document.getElementById('newSubtaskInput');
+
         if (input.value.trim()) {
             addSubtask(input.value.trim());
         }
@@ -2020,6 +2152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') {
             e.preventDefault();
             const input = document.getElementById('newSubtaskInput');
+
             if (input.value.trim()) {
                 addSubtask(input.value.trim());
             }
@@ -2028,8 +2161,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('subtasksContainer')?.addEventListener('click', (e) => {
         const deleteBtn = e.target.closest('.delete-subtask');
+
         if (deleteBtn) {
             const subtaskEl = deleteBtn.closest('.subtask');
+
             if (subtaskEl) {
                 subtaskEl.remove();
             }

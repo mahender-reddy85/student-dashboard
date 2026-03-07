@@ -166,7 +166,3 @@ The application is optimized for Firebase Hosting with proper caching headers an
 ## 📝 Contributing
 
 Feel free to submit issues and enhancement requests to improve this task management application.
-
-## 📄 License
-
-This project is open source and available under the [MIT License](LICENSE).
