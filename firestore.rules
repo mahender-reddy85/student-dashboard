@@ -3,28 +3,27 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isValidTask(data) {
-      return data.keys().hasOnly(['id', 'title', 'status', 'priority', 'order', 'createdAt', 'updatedAt', 'completed', 'pinned', 'subtasks', 'isChecklist', 'userId', 'description', 'dueDate', 'deletedAt', 'files'])
-        && data.title is string
-        && (data.description == null || data.description is string)
-        && data.status is string
-        && data.priority is string
-        && data.order is number
-        && data.pinned is bool
-        && data.subtasks is list
-        && data.isChecklist is bool
-        && data.completed is bool
-        && data.userId is string
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp
-        && (data.dueDate == null || data.dueDate is timestamp);
+      return data.keys().hasAny(['title', 'status', 'priority']) 
+        && data.get('title', '') is string
+        && data.get('status', 'todo') is string
+        && (data.get('description', null) == null || data.get('description', '') is string)
+        && data.get('order', 0) is number
+        && data.get('pinned', false) is bool
+        && data.get('subtasks', []) is list
+        && data.get('isChecklist', false) is bool
+        && data.get('completed', false) is bool
+        && data.get('createdAt', request.time) is timestamp
+        && data.get('updatedAt', request.time) is timestamp
+        && (data.get('dueDate', null) == null || data.get('dueDate', request.time) is timestamp);
     }
 
     function isSafeCreate(data) {
-      return data.completed == false && data.createdAt == request.time;
+      return data.get('completed', false) == false 
+          && data.get('createdAt', request.time) == request.time;
     }
 
     function isSafeUpdate(data) {
-      return data.createdAt == resource.data.createdAt;
+      return data.get('createdAt', resource.data.createdAt) == resource.data.createdAt;
     }
 
     // Shared Demo Data in Tiered Structure

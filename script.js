@@ -215,7 +215,6 @@ async function updateTaskInDatabase(taskId, taskData) {
                 dueDate: updateData.dueDate || null,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
-                userId: currentUserId,
                 subtasks: updateData.subtasks || []
             });
         } else {
@@ -233,7 +232,7 @@ async function updateTaskInDatabase(taskId, taskData) {
                     let value = updateData[field];
                     
                     // Normalize all dates to Firestore Timestamps for the security rules
-                    if (['dueDate', 'createdAt', 'updatedAt', 'deletedAt'].includes(field) && value !== null && value !== undefined) {
+                    if (['dueDate', 'updatedAt', 'deletedAt'].includes(field) && value !== null && value !== undefined) {
                         try {
                             const dateObj = new Date(value);
                             if (!isNaN(dateObj.getTime())) {
@@ -1354,7 +1353,6 @@ async function handleFormSubmit(e) {
         dueDate: dueDateTimestamp,
         pinned: existingTask?.pinned || false,
         subtasks: currentSubtasks.length > 0 ? currentSubtasks : (existingTask?.subtasks || []),
-        userId: currentUserId,
         updatedAt: Date.now()
     }
     if (existingTask) {
