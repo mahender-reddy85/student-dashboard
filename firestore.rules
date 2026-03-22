@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isValidTask(data) {
-      return data.keys().hasAll(['title', 'status', 'priority', 'order', 'createdAt', 'updatedAt', 'completed', 'pinned', 'subtasks', 'isChecklist', 'userId'])
+      return data.keys().hasOnly(['title', 'status', 'priority', 'order', 'createdAt', 'updatedAt', 'completed', 'pinned', 'subtasks', 'isChecklist', 'userId', 'description', 'dueDate'])
         && data.title is string
         && (data.description == null || data.description is string)
         && data.status is string
@@ -27,11 +27,11 @@ service cloud.firestore {
       return data.createdAt == resource.data.createdAt;
     }
 
-    // Clean Root Structure (User recommendation)
-    match /demoTasks/{taskId} {
+    // Public Demo Data - READ ONLY
+    // Skip users can see this, but no one can modify it via the app
+    match /public/demoTasks {
       allow read: if true;
-      allow write: if isValidTask(request.resource.data) 
-                    && (request.method == 'create' ? isSafeCreate(request.resource.data) : isSafeUpdate(request.resource.data));
+      allow write: if false;
     }
 
     // Auth Tasks

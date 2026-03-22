@@ -171,26 +171,43 @@ function hideToast(toastElement) {
 // Database Functions
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], isChecklist = false, completed = false) {
     try {
+        if (currentUserId === 'skip-auth-user') {
+            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            const columnTasks = tasks.filter(task => task.status === status);
+            const newOrder = columnTasks.length;
 
-        
+            const newTask = {
+                id: 'local-' + Date.now().toString(),
+                title: title,
+                description: description,
+                status: status,
+                priority: priority,
+                pinned: false,
+                order: newOrder,
+                dueDate: dueDate,
+                createdAt: new Date().getTime(),
+                updatedAt: new Date().getTime(),
+                userId: 'anonymous-visitor',
+                subtasks: subtasks,
+                isChecklist: isChecklist,
+                completed: completed
+            };
 
-        // Check if currentUserId is valid before accessing Firestore
+            tasks.push(newTask);
+            localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
+            return { id: newTask.id };
+        }
+
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             console.warn('No valid currentUserId found, cannot save to database');
             return null;
         }
 
-        // Convert dueDate to Firestore Timestamp if provided
         const dueDateTimestamp = dueDate ? Timestamp.fromDate(new Date(dueDate)) : null;
-
-        // Calculate order for new task (add to end of column)
         const columnTasks = state.tasks.filter(task => task.status === status);
         const newOrder = columnTasks.length;
 
-        const tasksCol = currentUserId === 'skip-auth-user' 
-            ? collection(db, "demoTasks") 
-            : collection(db, "users", currentUserId, "tasks");
-        const docRef = await addDoc(tasksCol, {
+        const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             description: description,
             status: status,
@@ -205,12 +222,8 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
             isChecklist: isChecklist,
             completed: completed
         });
-
-        // Return the document reference with the generated ID
         return docRef;
-    }
-
-    catch (error) {
+    } catch (error) {
         handleDatabaseError(error, 'save task');
         return null;
     }
@@ -224,37 +237,31 @@ function handleDatabaseError(error, operation) {
 
 async function updateTaskInDatabase(taskId, taskData) {
     try {
+        if (currentUserId === 'skip-auth-user') {
+            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            const taskIndex = tasks.findIndex(task => task.id === taskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex] = { ...tasks[taskIndex], ...taskData, updatedAt: new Date().getTime() };
+                localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
+            }
+            return;
+        }
 
-        
-
-        // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             console.warn('No valid currentUserId found, cannot update database');
             return;
         }
 
-        // Convert dueDate to Firestore Timestamp if provided
-        const updateData = {
-            ...taskData
-        }
-
-            ;
-
+        const updateData = { ...taskData };
         if (updateData.dueDate) {
             updateData.dueDate = Timestamp.fromDate(new Date(updateData.dueDate));
         }
 
-        const taskRef = currentUserId === 'skip-auth-user'
-            ? doc(db, "demoTasks", taskId)
-            : doc(db, "users", currentUserId, "tasks", taskId);
-
-        // First check if document exists
+        const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         const taskDoc = await getDoc(taskRef);
 
         if (!taskDoc.exists()) {
             console.warn(`Task ${taskId} not found in database, creating new document`);
-
-            // If document doesn't exist, create it instead
             await setDoc(taskRef, {
                 title: updateData.title || '',
                 description: updateData.description || null,
@@ -268,19 +275,10 @@ async function updateTaskInDatabase(taskId, taskData) {
                 userId: currentUserId,
                 subtasks: updateData.subtasks || []
             });
+        } else {
+            await updateDoc(taskRef, { ...updateData, updatedAt: serverTimestamp() });
         }
-
-        else {
-
-            // Document exists, update it
-            await updateDoc(taskRef, {
-                ...updateData,
-                updatedAt: serverTimestamp()
-            });
-        }
-    }
-
-    catch (error) {
+    } catch (error) {
         console.error("Database update error:", error);
         showToast('Failed to update task', 'error');
     }
@@ -288,79 +286,66 @@ async function updateTaskInDatabase(taskId, taskData) {
 
 async function deleteTaskFromDatabase(taskId) {
     try {
+        if (currentUserId === 'skip-auth-user') {
+            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            const filteredTasks = tasks.filter(task => task.id !== taskId);
+            localStorage.setItem('skip-auth-tasks', JSON.stringify(filteredTasks));
+            return;
+        }
 
-        
-
-        // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             console.warn('No valid currentUserId found, cannot delete from database');
             return;
         }
 
-        const taskRef = currentUserId === 'skip-auth-user'
-            ? doc(db, "demoTasks", taskId)
-            : doc(db, "users", currentUserId, "tasks", taskId);
+        const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
-    }
-
-    catch (error) {
+    } catch (error) {
         console.error("Database delete error:", error);
     }
 }
 
 async function loadTasksFromDatabase() {
     try {
-        // Update global variables first
         updateGlobalVariables();
+        if (isClearingOrUndoing) return;
 
-        // Skip loading if we're in the middle of clear/undo operations
-        if (isClearingOrUndoing) {
-            return;
-        }
-
-        // Wait a bit for Firebase auth to complete
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             setTimeout(loadTasksFromDatabase, 100);
             return;
         }
 
-        
+        if (currentUserId === 'skip-auth-user') {
+            const localTasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            try {
+                const publicDocRef = doc(db, "public", "demoTasks");
+                const publicDoc = await getDoc(publicDocRef);
+                if (publicDoc.exists()) {
+                    const demoData = publicDoc.data().tasks || [];
+                    state.tasks = [...demoData, ...localTasks];
+                } else {
+                    state.tasks = localTasks;
+                }
+            } catch (e) {
+                console.warn('Failed to load public demo tasks', e);
+                state.tasks = localTasks;
+            }
+            renderBoard();
+            return;
+        }
 
-        // Clear existing tasks to avoid duplicates
         state.tasks = [];
-
-        const tasksCol = currentUserId === 'skip-auth-user'
-            ? collection(db, "demoTasks")
-            : collection(db, "users", currentUserId, "tasks");
-        const querySnapshot = await getDocs(tasksCol);
-
+        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-
-            // Handle Firestore Timestamps properly
             const getTimestampValue = (timestamp) => {
                 if (!timestamp) return null;
-
-                if (typeof timestamp.toDate === 'function') {
-                    return timestamp.toDate().getTime();
-                }
-
-                if (typeof timestamp === 'number') {
-                    return timestamp;
-                }
-
-                if (typeof timestamp === 'string') {
-                    return new Date(timestamp).getTime();
-                }
-
+                if (typeof timestamp.toDate === 'function') return timestamp.toDate().getTime();
                 return new Date(timestamp).getTime();
-            }
+            };
 
-                ;
-
-            // Create task object with all fields from database
             const task = {
-                id: doc.id, // Use actual Firestore document ID
+                id: doc.id,
                 title: data.title,
                 status: data.status,
                 dueDate: getTimestampValue(data.dueDate),
@@ -374,19 +359,11 @@ async function loadTasksFromDatabase() {
                 order: data.order || 0,
                 isChecklist: data.isChecklist || false,
                 completed: data.completed || false
-            }
-
-                ;
-
-            // Add to state
+            };
             state.tasks.push(task);
         });
-
-        // Render board with loaded tasks
         renderBoard();
-    }
-
-    catch (error) {
+    } catch (error) {
         console.error("Database load error:", error);
         showToast('Failed to load tasks', 'error');
     }
