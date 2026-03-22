@@ -219,22 +219,39 @@ async function updateTaskInDatabase(taskId, taskData) {
                 subtasks: updateData.subtasks || []
             });
         } else {
-            // Prepare clean data for Firestore
-            const cleanUpdateData = { ...updateData };
-            
-            // Remove 'id' if present (it's the document reference, not a field)
-            delete cleanUpdateData.id;
-            
-            // Convert any primitive timestamp numbers back to Firestore Timestamps 
-            // for security rule compatibility (rules expect timestamp type)
-            if (cleanUpdateData.createdAt && typeof cleanUpdateData.createdAt === 'number') {
-                cleanUpdateData.createdAt = Timestamp.fromMillis(cleanUpdateData.createdAt);
-            }
-            if (cleanUpdateData.dueDate && typeof cleanUpdateData.dueDate === 'number') {
-                cleanUpdateData.dueDate = Timestamp.fromMillis(cleanUpdateData.dueDate);
-            }
+            // Prepare clean data for Firestore that satisfies strict security rules
+            const cleanUpdateData = {};
+            const schema = [
+                'title', 'status', 'priority', 'order', 'description', 
+                'dueDate', 'pinned', 'subtasks', 'isChecklist', 
+                'completed', 'userId', 'createdAt', 'updatedAt', 'deletedAt'
+            ];
 
-            await updateDoc(taskRef, { ...cleanUpdateData, updatedAt: serverTimestamp() });
+            // Only include fields that are present in the update and in our schema
+            schema.forEach(field => {
+                if (updateData[field] !== undefined) {
+                    let value = updateData[field];
+                    
+                    // Normalize all dates to Firestore Timestamps for the security rules
+                    if (['dueDate', 'createdAt', 'updatedAt', 'deletedAt'].includes(field) && value !== null && value !== undefined) {
+                        try {
+                            const dateObj = new Date(value);
+                            if (!isNaN(dateObj.getTime())) {
+                                value = Timestamp.fromDate(dateObj);
+                            }
+                        } catch (e) {
+                            console.warn(`Failed to convert ${field} to timestamp:`, e);
+                        }
+                    }
+                    
+                    cleanUpdateData[field] = value;
+                }
+            });
+
+            // Always update the modification timestamp
+            cleanUpdateData.updatedAt = serverTimestamp();
+
+            await updateDoc(taskRef, cleanUpdateData);
         }
     } catch (error) {
         console.error("Database update error:", error);
