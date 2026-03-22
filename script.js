@@ -11,17 +11,10 @@
 // Global variables from index.html
 let currentUserId = window.currentUserId || null;
 let db = window.db || null;
-let doc = window.doc || null;
-let collection = window.collection || null;
-let getDocs = window.getDocs || null;
-let addDoc = window.addDoc || null;
-let deleteDoc = window.deleteDoc || null;
-let updateDoc = window.updateDoc || null;
-let getDoc = window.getDoc || null;
-let setDoc = window.setDoc || null;
-let serverTimestamp = window.serverTimestamp || null;
-let writeBatch = window.writeBatch || null;
-let Timestamp = window.Timestamp || null;
+let onSnapshot = window.onSnapshot || null;
+// Track firestore listeners for cleanup
+let unsubscribeTasks = null;
+let unsubscribeDemo = null;
 // Flag to prevent reloading during clear/undo operations
 let isClearingOrUndoing = false;
 const state = {
@@ -288,9 +281,7 @@ async function loadTasksFromDatabase() {
         addDoc = window.addDoc || addDoc;
         deleteDoc = window.deleteDoc || deleteDoc;
         updateDoc = window.updateDoc || updateDoc;
-        getDoc = window.getDoc || getDoc;
-        setDoc = window.setDoc || setDoc;
-        serverTimestamp = window.serverTimestamp || serverTimestamp;
+        onSnapshot = window.onSnapshot || onSnapshot;
         writeBatch = window.writeBatch || writeBatch;
         Timestamp = window.Timestamp || Timestamp;
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
@@ -323,20 +314,38 @@ async function loadTasksFromDatabase() {
         };
         if (currentUserId === 'skip-auth-user') {
             const localTasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
+            // Handle real-time updates for public demo tasks too
+            if (unsubscribeDemo) unsubscribeDemo();
             try {
-                // Hierarchical Path: public (Col) -> demo (Doc) -> demoTasks (Sub-Col)
-                const publicSnap = await getDocs(collection(db, "public", "demo", "demoTasks"));
-                const publicTasks = publicSnap.docs.map(d => parseTaskDoc(d, 'anonymous-visitor'));
-                state.tasks = [...publicTasks, ...localTasks];
+                const demoTasksRef = collection(db, "public", "demo", "demoTasks");
+                unsubscribeDemo = onSnapshot(demoTasksRef, (snap) => {
+                    const publicTasks = snap.docs.map(d => parseTaskDoc(d, 'anonymous-visitor'));
+                    state.tasks = [...publicTasks, ...localTasks];
+                    renderBoard();
+                }, (e) => {
+                    console.warn('Failed to subscribe to demoTasks:', e);
+                    state.tasks = localTasks;
+                    renderBoard();
+                });
             } catch (e) {
                 console.warn('Failed to load demoTasks from Firestore:', e);
                 state.tasks = localTasks;
+                renderBoard();
             }
         } else {
-            const querySnapshot = await getDocs(collection(window.db, "users", currentUserId, "tasks"));
-            state.tasks = querySnapshot.docs.map(d => parseTaskDoc(d, currentUserId));
+            // Remove previous listener if it exists
+            if (unsubscribeTasks) unsubscribeTasks();
+            
+            // Set up real-time listener for user tasks
+            const userTasksRef = collection(window.db, "users", currentUserId, "tasks");
+            unsubscribeTasks = onSnapshot(userTasksRef, (querySnapshot) => {
+                state.tasks = querySnapshot.docs.map(d => parseTaskDoc(d, currentUserId));
+                renderBoard();
+            }, (error) => {
+                console.error("Task subscription error:", error);
+                showToast('Failed to sync tasks', 'error');
+            });
         }
-        renderBoard();
     } catch (error) {
         console.error("Database load error:", error);
         showToast('Failed to load tasks', 'error');
