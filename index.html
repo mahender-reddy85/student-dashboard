@@ -436,6 +436,7 @@
         measurementId: "G-K6S3ZYFT18"
       };
     </script>
+    <script src="script.js" defer></script>
     <script type="module" defer>
       // Firebase Configuration and Initialization - Deferred loading
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -621,19 +622,19 @@
           window.currentUserId = 'skip-auth-user';
           updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
           showMainApp();
-          loadTasks();
+          if (window.loadTasks) window.loadTasks();
         } else if (isSkipAuthUser === 'true') {
           // Returning skip auth user
           window.currentUserId = 'skip-auth-user';
           updateUserProfile('Skip Auth User', true); // Pass flag to hide avatar
           showMainApp();
-          loadTasks();
+          if (window.loadTasks) window.loadTasks();
         } else if (user) {
           window.currentUserId = user.uid;
           const userEmail = user.email || 'Anonymous User';
           updateUserProfile(userEmail, false); // Normal user, show avatar
           showMainApp();
-          loadTasks();
+          if (window.loadTasks) window.loadTasks();
 
           // Auto-redirect check - if coming from auth page, show success message
           const urlParams = new URLSearchParams(window.location.search);
@@ -724,7 +725,7 @@
             showMainApp();
             window.currentUserId = 'skip-auth-user';
             updateUserProfile('Skip Auth User', true);
-            loadTasks();
+            if (window.loadTasks) window.loadTasks();
           });
         }
 
@@ -758,7 +759,6 @@
       });
     </script>
     <!-- Main application script - loaded with defer for better performance -->
-    <script src="script.js" defer></script>
 </body>
 
 </html>

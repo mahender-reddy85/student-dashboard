@@ -10,9 +10,9 @@
  */
 // Global variables from index.html
 let currentUserId = window.currentUserId || null;
-const db = window.db || null;
-const writeBatch = window.writeBatch || null;
-const Timestamp = window.Timestamp || null;
+let db = window.db || null;
+let writeBatch = window.writeBatch || null;
+let Timestamp = window.Timestamp || null;
 // Flag to prevent reloading during clear/undo operations
 let isClearingOrUndoing = false;
 const state = {
@@ -238,8 +238,11 @@ async function loadTasksFromDatabase() {
     try {
         if (isClearingOrUndoing) return;
         // Try to get values from window if they aren't initialized
-        if (!currentUserId) currentUserId = window.currentUserId;
-        if (!db) db = window.db;
+        // Ensure we have latest Firebase references
+        currentUserId = window.currentUserId;
+        db = window.db || db;
+        writeBatch = window.writeBatch || writeBatch;
+        Timestamp = window.Timestamp || Timestamp;
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
             console.log("No user ID yet, waiting...");
             setTimeout(loadTasksFromDatabase, 500);
