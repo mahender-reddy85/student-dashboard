@@ -8,10 +8,22 @@
  * @property {string} sortOrder - Sort order ('none', 'asc', 'desc')
  * @property {Object|null} lastDeletedTask - Last deleted task for undo functionality
  */
-// Global variables from index.html
+// Global variables from index.html (initialized by Firebase module)
 let currentUserId = window.currentUserId || null;
 let db = window.db || null;
 let onSnapshot = window.onSnapshot || null;
+let collection = window.collection || null;
+let addDoc = window.addDoc || null;
+let deleteDoc = window.deleteDoc || null;
+let updateDoc = window.updateDoc || null;
+let getDoc = window.getDoc || null;
+let setDoc = window.setDoc || null;
+let serverTimestamp = window.serverTimestamp || null;
+let writeBatch = window.writeBatch || null;
+let Timestamp = window.Timestamp || null;
+let getDocs = window.getDocs || null;
+let doc = window.doc || null;
+
 // Track firestore listeners for cleanup
 let unsubscribeTasks = null;
 let unsubscribeDemo = null;
@@ -271,8 +283,7 @@ async function deleteTaskFromDatabase(taskId) {
 async function loadTasksFromDatabase() {
     try {
         if (isClearingOrUndoing) return;
-        // Try to get values from window if they aren't initialized
-        // Ensure we have latest Firebase references
+        // Synchronize reference with window object (initialized by deferred module)
         currentUserId = window.currentUserId;
         db = window.db || db;
         doc = window.doc || doc;
@@ -281,6 +292,9 @@ async function loadTasksFromDatabase() {
         addDoc = window.addDoc || addDoc;
         deleteDoc = window.deleteDoc || deleteDoc;
         updateDoc = window.updateDoc || updateDoc;
+        getDoc = window.getDoc || getDoc;
+        setDoc = window.setDoc || setDoc;
+        serverTimestamp = window.serverTimestamp || serverTimestamp;
         onSnapshot = window.onSnapshot || onSnapshot;
         writeBatch = window.writeBatch || writeBatch;
         Timestamp = window.Timestamp || Timestamp;
@@ -1136,7 +1150,6 @@ function setupEventListeners() {
         }
     });
 }
-// Added missing closing brace for setupEventListeners function
 // --- Checklist Management ---
 let currentChecklistStatus = 'todo';
 let recentlyAddedChecklistItems = [];
@@ -1685,15 +1698,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('newSubtaskInput');
             if (input.value.trim()) {
                 addSubtask(input.value.trim());
-            }
-        }
-    });
-    document.getElementById('subtasksContainer')?.addEventListener('click', (e) => {
-        const deleteBtn = e.target.closest('.delete-subtask');
-        if (deleteBtn) {
-            const subtaskEl = deleteBtn.closest('.subtask');
-            if (subtaskEl) {
-                subtaskEl.remove();
             }
         }
     });

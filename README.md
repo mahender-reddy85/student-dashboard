@@ -51,7 +51,7 @@ A modern Kanban board application with Firebase authentication and real-time tas
    - Copy your Firebase configuration
 
 ### 2. Configure Application
-   - Open `index.html` and update the `firebaseConfig` object (lines 976-985):
+   - Open `index.html` and update the `firebaseConfig` object (around line 430):
      ```javascript
      const firebaseConfig = {
          apiKey: "YOUR_API_KEY",
@@ -73,14 +73,14 @@ A modern Kanban board application with Firebase authentication and real-time tas
 ## 📁 File Structure
 
 ```
-buildathon/
+buildathon/ (current project root: student-dashboard)
 ├── index.html          # Main application with embedded auth & config
 ├── styles.css           # Complete styling with responsive design
-├── script.js            # Application logic with centralized error handling
-├── package.json         # Deployment configuration
+├── script.js            # Application logic with real-time sync
+├── package.json         # Project metadata & deployment config
 ├── README.md            # This documentation
-├── .gitignore           # Git ignore rules (excludes sensitive files)
-└── favicon.png          # Application icon
+├── firestore.rules      # Security rules for production
+└── favicon.png          # Dashboard icon
 ```
 
 ## 🔐 Security Features
