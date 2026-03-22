@@ -224,7 +224,7 @@ async function updateTaskInDatabase(taskId, taskData) {
             const schema = [
                 'title', 'status', 'priority', 'order', 'description', 
                 'dueDate', 'pinned', 'subtasks', 'isChecklist', 
-                'completed', 'userId', 'updatedAt', 'deletedAt'
+                'completed', 'updatedAt', 'deletedAt'
             ];
 
             // Only include fields that are present in the update and in our schema

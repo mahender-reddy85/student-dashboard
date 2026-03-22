@@ -43,8 +43,8 @@ service cloud.firestore {
                   && isSafeCreate(request.resource.data);
       
       allow update: if request.auth != null && request.auth.uid == uid 
-                  && isValidTask(request.resource.data) 
-                  && isSafeUpdate(request.resource.data);
+                  && isValidTask(resource.data.merge(request.resource.data)) 
+                  && isSafeUpdate(resource.data.merge(request.resource.data));
     }
   }
 }
