@@ -293,8 +293,8 @@ async function loadTasksFromDatabase() {
         if (currentUserId === 'skip-auth-user') {
             const localTasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             try {
-                // Hierarchical Path: public (Col) -> demoTasks (Doc) -> demoTasks (Sub-Col)
-                const publicSnap = await getDocs(collection(window.db, "public", "demoTasks", "demoTasks"));
+                // Hierarchical Path: public (Col) -> demoTasks (Doc) -> tasks (Sub-Col)
+                const publicSnap = await getDocs(collection(window.db, "public", "demoTasks", "tasks"));
                 const publicTasks = publicSnap.docs.map(d => parseTaskDoc(d, 'anonymous-visitor'));
                 state.tasks = [...publicTasks, ...localTasks];
             } catch (e) {
