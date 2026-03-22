@@ -84,6 +84,7 @@ body::before {
 }
 
 @keyframes floatBooks {
+
 	0%,
 	100% {
 		transform: translate(-50%, -50%) rotate(0) scale(1);
@@ -1904,6 +1905,7 @@ textarea.form-control {
 }
 
 @keyframes pulse {
+
 	0%,
 	100% {
 		opacity: 1;
@@ -2152,6 +2154,7 @@ textarea.form-control {
 }
 
 @keyframes auth-show {
+
 	0%,
 	49.99% {
 		opacity: 0;

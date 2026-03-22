@@ -160,7 +160,7 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         const dueDateTimestamp = dueDate ? Timestamp.fromDate(new Date(dueDate)) : null;
         const columnTasks = state.tasks.filter(task => task.status === status);
         const newOrder = columnTasks.length;
-        
+
         const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             description: description,
@@ -226,8 +226,8 @@ async function updateTaskInDatabase(taskId, taskData) {
             // Prepare clean data for Firestore that satisfies strict security rules
             const cleanUpdateData = {};
             const schema = [
-                'title', 'status', 'priority', 'order', 'description', 
-                'dueDate', 'pinned', 'subtasks', 'isChecklist', 
+                'title', 'status', 'priority', 'order', 'description',
+                'dueDate', 'pinned', 'subtasks', 'isChecklist',
                 'completed', 'updatedAt', 'deletedAt'
             ];
 
@@ -235,7 +235,7 @@ async function updateTaskInDatabase(taskId, taskData) {
             schema.forEach(field => {
                 if (updateData[field] !== undefined) {
                     let value = updateData[field];
-                    
+
                     // Normalize all dates to Firestore Timestamps for the security rules
                     if (['dueDate', 'updatedAt', 'deletedAt'].includes(field) && value !== null && value !== undefined) {
                         try {
@@ -247,7 +247,7 @@ async function updateTaskInDatabase(taskId, taskData) {
                             console.warn(`Failed to convert ${field} to timestamp:`, e);
                         }
                     }
-                    
+
                     cleanUpdateData[field] = value;
                 }
             });
@@ -349,7 +349,7 @@ async function loadTasksFromDatabase() {
         } else {
             // Remove previous listener if it exists
             if (unsubscribeTasks) unsubscribeTasks();
-            
+
             // Set up real-time listener for user tasks
             const userTasksRef = collection(window.db, "users", currentUserId, "tasks");
             unsubscribeTasks = onSnapshot(userTasksRef, (querySnapshot) => {
@@ -1094,7 +1094,7 @@ function setupEventListeners() {
                             subtasks: task.subtasks || [],
                             updatedAt: serverTimestamp()
                         };
-                        
+
                         if (task.dueDate) {
                             taskData.dueDate = Timestamp.fromDate(new Date(task.dueDate));
                         }
@@ -1108,9 +1108,9 @@ function setupEventListeners() {
                     await batch.commit();
                 }
                 catch (error) {
-                        console.error("Error restoring tasks to Firestore:", error);
-                        showToast('Failed to restore tasks', 'error');
-                    }
+                    console.error("Error restoring tasks to Firestore:", error);
+                    showToast('Failed to restore tasks', 'error');
+                }
                 renderBoard();
                 showToast('Board restored', 'success');
                 // Clear flag after a short delay to allow undo to complete
