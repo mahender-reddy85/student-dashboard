@@ -125,6 +125,7 @@ function hideToast(toastElement) {
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], isChecklist = false, completed = false) {
     try {
         if (currentUserId === 'skip-auth-user') {
+            console.log("Saving task to LocalStorage (Skip Auth mode)");
             const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             const columnTasks = tasks.filter(task => task.status === status);
             const newOrder = columnTasks.length;
@@ -155,6 +156,8 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         const dueDateTimestamp = dueDate ? Timestamp.fromDate(new Date(dueDate)) : null;
         const columnTasks = state.tasks.filter(task => task.status === status);
         const newOrder = columnTasks.length;
+        
+        console.log(`Saving private task for user: ${currentUserId} to users/${currentUserId}/tasks`);
         const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
             title: title,
             description: description,
@@ -293,17 +296,23 @@ async function loadTasksFromDatabase() {
         if (currentUserId === 'skip-auth-user') {
             const localTasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             try {
-                // Hierarchical Path: public (Col) -> demoTasks (Doc) -> tasks (Sub-Col)
-                const publicSnap = await getDocs(collection(window.db, "public", "demoTasks", "tasks"));
+                // Debug log for path verification
+                console.log("Reading public demo data from: public/demoTasks");
+                
+                // Path requested by user
+                const publicSnap = await getDocs(collection(window.db, "public", "demoTasks"));
                 const publicTasks = publicSnap.docs.map(d => parseTaskDoc(d, 'anonymous-visitor'));
                 state.tasks = [...publicTasks, ...localTasks];
+                console.log(`Loaded ${publicTasks.length} demo tasks and ${localTasks.length} local tasks.`);
             } catch (e) {
-                console.warn('Failed to load demoTasks', e);
+                console.warn('Failed to load demoTasks from Firestore:', e);
                 state.tasks = localTasks;
             }
         } else {
+            console.log(`Loading private tasks for user: ${currentUserId}`);
             const querySnapshot = await getDocs(collection(window.db, "users", currentUserId, "tasks"));
             state.tasks = querySnapshot.docs.map(d => parseTaskDoc(d, currentUserId));
+            console.log(`Loaded ${state.tasks.length} tasks from Firestore.`);
         }
         renderBoard();
     } catch (error) {

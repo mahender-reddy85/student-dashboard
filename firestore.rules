@@ -28,8 +28,8 @@ service cloud.firestore {
     }
 
     // Shared Demo Data in Nested Structure
-    // Root Collection: public -> Document: demoTasks -> Sub-Collection: tasks
-    match /public/demoTasks/tasks/{taskId} {
+    // Public -> demoTasks (Collection)
+    match /public/demoTasks/{taskId} {
       allow read: if true;
       allow write: if false;
     }
