@@ -172,42 +172,7 @@ function hideToast(toastElement) {
 async function saveTaskToDatabase(title, status, dueDate, description = '', priority = 'medium', subtasks = [], isChecklist = false, completed = false) {
     try {
 
-        // Check if user is using skip auth
-        if (currentUserId === 'skip-auth-user') {
-            // Use localStorage for skip auth users
-            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
-
-            // Calculate order for new task (add to end of column)
-            const columnTasks = tasks.filter(task => task.status === status);
-            const newOrder = columnTasks.length;
-
-            const newTask = {
-                id: Date.now().toString(),
-                title: title,
-                description: description,
-                status: status,
-                priority: priority,
-                pinned: false,
-                order: newOrder,
-                dueDate: dueDate,
-                createdAt: new Date().getTime(),
-                updatedAt: new Date().getTime(),
-                userId: currentUserId,
-                subtasks: subtasks,
-                isChecklist: isChecklist,
-                completed: completed
-            }
-
-                ;
-            tasks.push(newTask);
-            localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
-
-            return {
-                id: newTask.id
-            }
-
-                ;
-        }
+        
 
         // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
@@ -222,7 +187,10 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         const columnTasks = state.tasks.filter(task => task.status === status);
         const newOrder = columnTasks.length;
 
-        const docRef = await addDoc(collection(db, "users", currentUserId, "tasks"), {
+        const tasksCol = currentUserId === 'skip-auth-user' 
+            ? collection(db, "public", "demoTasks", "tasks") 
+            : collection(db, "users", currentUserId, "tasks");
+        const docRef = await addDoc(tasksCol, {
             title: title,
             description: description,
             status: status,
@@ -257,25 +225,7 @@ function handleDatabaseError(error, operation) {
 async function updateTaskInDatabase(taskId, taskData) {
     try {
 
-        // Check if user is using skip auth
-        if (currentUserId === 'skip-auth-user') {
-            // Use localStorage for skip auth users
-            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
-            const taskIndex = tasks.findIndex(task => task.id === taskId);
-
-            if (taskIndex !== -1) {
-                tasks[taskIndex] = {
-                    ...tasks[taskIndex],
-                    ...taskData,
-                    updatedAt: new Date().getTime()
-                }
-
-                    ;
-                localStorage.setItem('skip-auth-tasks', JSON.stringify(tasks));
-            }
-
-            return;
-        }
+        
 
         // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
@@ -294,7 +244,9 @@ async function updateTaskInDatabase(taskId, taskData) {
             updateData.dueDate = Timestamp.fromDate(new Date(updateData.dueDate));
         }
 
-        const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
+        const taskRef = currentUserId === 'skip-auth-user'
+            ? doc(db, "public", "demoTasks", "tasks", taskId)
+            : doc(db, "users", currentUserId, "tasks", taskId);
 
         // First check if document exists
         const taskDoc = await getDoc(taskRef);
@@ -337,14 +289,7 @@ async function updateTaskInDatabase(taskId, taskData) {
 async function deleteTaskFromDatabase(taskId) {
     try {
 
-        // Check if user is using skip auth
-        if (currentUserId === 'skip-auth-user') {
-            // Use localStorage for skip auth users
-            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
-            const filteredTasks = tasks.filter(task => task.id !== taskId);
-            localStorage.setItem('skip-auth-tasks', JSON.stringify(filteredTasks));
-            return;
-        }
+        
 
         // Check if currentUserId is valid before accessing Firestore
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
@@ -352,7 +297,9 @@ async function deleteTaskFromDatabase(taskId) {
             return;
         }
 
-        const taskRef = doc(db, "users", currentUserId, "tasks", taskId);
+        const taskRef = currentUserId === 'skip-auth-user'
+            ? doc(db, "public", "demoTasks", "tasks", taskId)
+            : doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
     }
 
@@ -377,19 +324,15 @@ async function loadTasksFromDatabase() {
             return;
         }
 
-        // Check if user is using skip auth
-        if (currentUserId === 'skip-auth-user') {
-            // Use localStorage for skip auth users
-            const tasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
-            state.tasks = tasks;
-            renderBoard();
-            return;
-        }
+        
 
         // Clear existing tasks to avoid duplicates
         state.tasks = [];
 
-        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
+        const tasksCol = currentUserId === 'skip-auth-user'
+            ? collection(db, "public", "demoTasks", "tasks")
+            : collection(db, "users", currentUserId, "tasks");
+        const querySnapshot = await getDocs(tasksCol);
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
@@ -1349,17 +1292,13 @@ function setupEventListeners() {
         // Clear board
         state.tasks = [];
 
-        // Clear database for skip auth users
-        if (currentUserId === 'skip-auth-user') {
-            localStorage.removeItem('skip-auth-tasks');
-        }
-
-        else {
-
-            // For authenticated users, delete all tasks from Firestore using batch
+        // For all users, delete all tasks from Firestore using batch
             try {
                 const batch = writeBatch(db);
-                const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
+                const tasksCol = currentUserId === 'skip-auth-user'
+                ? collection(db, "public", "demoTasks", "tasks")
+                : collection(db, "users", currentUserId, "tasks");
+            const querySnapshot = await getDocs(tasksCol);
 
                 querySnapshot.forEach((doc) => {
                     batch.delete(doc.ref);
@@ -1392,38 +1331,33 @@ function setupEventListeners() {
                 // Undo clear action
                 state.tasks = previousTasks;
 
-                // Restore database for skip auth users
-                if (currentUserId === 'skip-auth-user') {
-                    localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
+                // Restore all tasks to Firestore
+                try {
+                    const batch = writeBatch(db);
+
+                    previousTasks.forEach((task) => {
+                        const docRef = currentUserId === 'skip-auth-user'
+                            ? doc(db, "public", "demoTasks", "tasks", task.id)
+                            : doc(db, "users", currentUserId, "tasks", task.id);
+
+                        batch.set(docRef, {
+                            title: task.title,
+                            status: task.status,
+                            dueDate: task.dueDate ? new Date(task.dueDate) : null,
+                            description: task.description || '',
+                            priority: task.priority || 'medium',
+                            pinned: task.pinned || false,
+                            userId: currentUserId,
+                            subtasks: task.subtasks || [],
+                            createdAt: task.createdAt ? new Date(task.createdAt) : serverTimestamp(),
+                            updatedAt: serverTimestamp()
+                        });
+                    });
+
+                    await batch.commit();
                 }
 
-                else {
-
-                    // For authenticated users, restore all tasks to Firestore
-                    try {
-                        const batch = writeBatch(db);
-
-                        previousTasks.forEach((task) => {
-                            const docRef = doc(db, "users", currentUserId, "tasks", task.id);
-
-                            batch.set(docRef, {
-                                title: task.title,
-                                status: task.status,
-                                dueDate: task.dueDate ? new Date(task.dueDate) : null,
-                                description: task.description || '',
-                                priority: task.priority || 'medium',
-                                pinned: task.pinned || false,
-                                userId: currentUserId,
-                                subtasks: task.subtasks || [],
-                                createdAt: task.createdAt ? new Date(task.createdAt) : serverTimestamp(),
-                                updatedAt: serverTimestamp()
-                            });
-                        });
-
-                        await batch.commit();
-                    }
-
-                    catch (error) {
+                catch (error) {
                         console.error("Error restoring tasks to Firestore:", error);
                         showToast('Failed to restore tasks', 'error');
                     }

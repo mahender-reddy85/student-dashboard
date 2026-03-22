@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isValidTask() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['title', 'status', 'priority', 'order', 'createdAt', 'completed'])
+        && data.title is string
+        && data.status is string
+        && data.priority is string
+        && data.order is number
+        && data.createdAt is timestamp
+        && data.completed is bool;
+    }
+
+    function isSafeCreate() {
+      let data = request.resource.data;
+      // Prevent completing instantly on creation and prevent fake timestamps
+      return data.completed == false
+        && data.createdAt == request.time;
+    }
+
+    function isSafeUpdate() {
+      let data = request.resource.data;
+      // Prevent backdating / altering createdAt
+      return data.createdAt == resource.data.createdAt;
+    }
+
+    // 👀 Skip user: Should only access public/*
+    match /public/{document=**} {
+      // Access allowed for anyone in the public collections
+      allow read, delete: if true; 
+      allow create: if isValidTask() && isSafeCreate();
+      allow update: if isValidTask() && isSafeUpdate();
+    }
+
+    match /users/{uid}/tasks/{taskId} {
+      // ✅ Logged-in user: Should access their own tasks AND ❌ Try accessing another user: Should fail
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid && isValidTask() && isSafeCreate();
+      allow update: if request.auth != null && request.auth.uid == uid && isValidTask() && isSafeUpdate();
+    }
+  }
+}
