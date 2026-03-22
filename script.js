@@ -251,6 +251,9 @@ async function updateTaskInDatabase(taskId, taskData) {
             // Always update the modification timestamp
             cleanUpdateData.updatedAt = serverTimestamp();
 
+            console.log("Attempting Firestore update for task:", taskId);
+            console.log("Payload being sent:", cleanUpdateData);
+
             await updateDoc(taskRef, cleanUpdateData);
         }
     } catch (error) {
