@@ -1315,7 +1315,6 @@ function setupEventListeners() {
                 isClearingOrUndoing = false;
                 return;
             }
-        }
 
         renderBoard();
         hideClearBoardConfirmation();
@@ -1361,7 +1360,6 @@ function setupEventListeners() {
                         console.error("Error restoring tasks to Firestore:", error);
                         showToast('Failed to restore tasks', 'error');
                     }
-                }
 
                 renderBoard();
                 showToast('Board restored', 'success');
