@@ -300,7 +300,7 @@ async function loadTasksFromDatabase() {
                 console.log("Reading public demo data from: public/demo/demoTasks");
                 
                 // Hierarchical Path: public (Col) -> demo (Doc) -> demoTasks (Sub-Col)
-                const publicSnap = await getDocs(collection(window.db, "public", "demo", "demoTasks"));
+                const publicSnap = await getDocs(collection(db, "public", "demo", "demoTasks"));
                 const publicTasks = publicSnap.docs.map(d => parseTaskDoc(d, 'anonymous-visitor'));
                 state.tasks = [...publicTasks, ...localTasks];
                 console.log(`Loaded ${publicTasks.length} demo tasks and ${localTasks.length} local tasks.`);
