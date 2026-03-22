@@ -1156,6 +1156,16 @@ body::before {
 	color: #e2e8f0
 }
 
+.pin-btn.pinned {
+	color: var(--warning) !important;
+	opacity: 1 !important;
+}
+
+.task-card.pinned .pin-btn {
+	color: var(--warning);
+	opacity: 1;
+}
+
 .board-actions {
 	display: flex;
 	gap: .5rem;
