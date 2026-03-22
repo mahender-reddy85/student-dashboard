@@ -11,6 +11,15 @@
 // Global variables from index.html
 let currentUserId = window.currentUserId || null;
 let db = window.db || null;
+let doc = window.doc || null;
+let collection = window.collection || null;
+let getDocs = window.getDocs || null;
+let addDoc = window.addDoc || null;
+let deleteDoc = window.deleteDoc || null;
+let updateDoc = window.updateDoc || null;
+let getDoc = window.getDoc || null;
+let setDoc = window.setDoc || null;
+let serverTimestamp = window.serverTimestamp || null;
 let writeBatch = window.writeBatch || null;
 let Timestamp = window.Timestamp || null;
 // Flag to prevent reloading during clear/undo operations
@@ -241,6 +250,15 @@ async function loadTasksFromDatabase() {
         // Ensure we have latest Firebase references
         currentUserId = window.currentUserId;
         db = window.db || db;
+        doc = window.doc || doc;
+        collection = window.collection || collection;
+        getDocs = window.getDocs || getDocs;
+        addDoc = window.addDoc || addDoc;
+        deleteDoc = window.deleteDoc || deleteDoc;
+        updateDoc = window.updateDoc || updateDoc;
+        getDoc = window.getDoc || getDoc;
+        setDoc = window.setDoc || setDoc;
+        serverTimestamp = window.serverTimestamp || serverTimestamp;
         writeBatch = window.writeBatch || writeBatch;
         Timestamp = window.Timestamp || Timestamp;
         if (!currentUserId || currentUserId === null || currentUserId === undefined) {
@@ -960,26 +978,34 @@ function setupEventListeners() {
         const previousTasks = [...state.tasks];
         // Clear board
         state.tasks = [];
-        // For all users, delete all tasks from Firestore using batch
-            try {
-                const batch = writeBatch(db);
-                const tasksCol = currentUserId === 'skip-auth-user'
-                ? collection(db, "demoTasks")
-                : collection(db, "users", currentUserId, "tasks");
+        // Handle skip-auth users (Local storage only)
+        if (currentUserId === 'skip-auth-user') {
+            localStorage.setItem('skip-auth-tasks', '[]');
+            renderBoard();
+            hideClearBoardConfirmation();
+            showToast('Board cleared', 'error');
+            isClearingOrUndoing = false;
+            return;
+        }
+
+        // Handle authenticated users (Firestore)
+        try {
+            const batch = writeBatch(db);
+            const tasksCol = collection(db, "users", currentUserId, "tasks");
             const querySnapshot = await getDocs(tasksCol);
-                querySnapshot.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-            }
-            catch (error) {
-                console.error("Error clearing tasks from Firestore:", error);
-                showToast('Failed to clear all tasks from database', 'error');
-                // Restore tasks on error
-                state.tasks = previousTasks;
-                isClearingOrUndoing = false;
-                return;
-            }
+            querySnapshot.forEach((doc) => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+        }
+        catch (error) {
+            console.error("Error clearing tasks from Firestore:", error);
+            showToast('Failed to clear all tasks from database', 'error');
+            // Restore tasks on error
+            state.tasks = previousTasks;
+            isClearingOrUndoing = false;
+            return;
+        }
         renderBoard();
         hideClearBoardConfirmation();
         // Show toast with undo option
@@ -991,25 +1017,40 @@ function setupEventListeners() {
                 isClearingOrUndoing = true;
                 // Undo clear action
                 state.tasks = previousTasks;
-                // Restore all tasks to Firestore
+
+                // Handle skip-auth users
+                if (currentUserId === 'skip-auth-user') {
+                    localStorage.setItem('skip-auth-tasks', JSON.stringify(previousTasks));
+                    renderBoard();
+                    showToast('Board restored', 'success');
+                    isClearingOrUndoing = false;
+                    return;
+                }
+
+                // Handle authenticated users (Firestore)
                 try {
                     const batch = writeBatch(db);
                     previousTasks.forEach((task) => {
-                        const docRef = currentUserId === 'skip-auth-user'
-                            ? doc(db, "demoTasks", task.id)
-                            : doc(db, "users", currentUserId, "tasks", task.id);
-                        batch.set(docRef, {
-                            title: task.title,
-                            status: task.status,
-                            dueDate: task.dueDate ? new Date(task.dueDate) : null,
+                        const taskData = {
+                            title: task.title || '',
+                            status: task.status || 'todo',
                             description: task.description || '',
                             priority: task.priority || 'medium',
                             pinned: task.pinned || false,
                             userId: currentUserId,
                             subtasks: task.subtasks || [],
-                            createdAt: task.createdAt ? new Date(task.createdAt) : serverTimestamp(),
                             updatedAt: serverTimestamp()
-                        });
+                        };
+                        
+                        if (task.dueDate) {
+                            taskData.dueDate = Timestamp.fromDate(new Date(task.dueDate));
+                        }
+                        if (task.createdAt) {
+                            taskData.createdAt = Timestamp.fromDate(new Date(task.createdAt));
+                        }
+
+                        const docRef = doc(db, "users", currentUserId, "tasks", task.id);
+                        batch.set(docRef, taskData);
                     });
                     await batch.commit();
                 }
