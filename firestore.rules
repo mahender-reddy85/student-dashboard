@@ -37,9 +37,14 @@ service cloud.firestore {
     // Auth Tasks (Private)
     match /users/{uid}/tasks/{taskId} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid 
-                    && isValidTask(request.resource.data) 
-                    && (request.method == 'create' ? isSafeCreate(request.resource.data) : isSafeUpdate(request.resource.data));
+      
+      allow create: if request.auth != null && request.auth.uid == uid 
+                  && isValidTask(request.resource.data) 
+                  && isSafeCreate(request.resource.data);
+      
+      allow update: if request.auth != null && request.auth.uid == uid 
+                  && isValidTask(request.resource.data) 
+                  && isSafeUpdate(request.resource.data);
     }
   }
 }
