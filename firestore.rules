@@ -20,31 +20,26 @@ service cloud.firestore {
     }
 
     function isSafeCreate(data) {
-      // Prevent completing instantly on creation and prevent fake timestamps
-      return data.completed == false
-        && data.createdAt == request.time;
+      return data.completed == false && data.createdAt == request.time;
     }
 
     function isSafeUpdate(data) {
-      // Prevent backdating / altering createdAt
       return data.createdAt == resource.data.createdAt;
     }
 
-    // New Public Demo Structure (Option A-ish)
-    // ROOT -> public (collection) -> demo (document) -> demoTasks (collection)
-    match /public/demo/demoTasks/{taskId} {
+    // Clean Root Structure (User recommendation)
+    match /demoTasks/{taskId} {
       allow read: if true;
       allow write: if isValidTask(request.resource.data) 
                     && (request.method == 'create' ? isSafeCreate(request.resource.data) : isSafeUpdate(request.resource.data));
     }
 
-    // Original User Tasks
+    // Auth Tasks
     match /users/{uid}/tasks/{taskId} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create: if request.auth != null && request.auth.uid == uid 
-                    && isValidTask(request.resource.data) && isSafeCreate(request.resource.data);
-      allow update: if request.auth != null && request.auth.uid == uid 
-                    && isValidTask(request.resource.data) && isSafeUpdate(request.resource.data);
+      allow create, update: if request.auth != null && request.auth.uid == uid 
+                    && isValidTask(request.resource.data) 
+                    && (request.method == 'create' ? isSafeCreate(request.resource.data) : isSafeUpdate(request.resource.data));
     }
   }
 }
