@@ -315,18 +315,62 @@ async function loadTasksFromDatabase() {
             return;
         }
 
+        state.tasks = [];
+        
+        const parseTaskDoc = (doc, userId) => {
+            const data = doc.data();
+            const getTimestampValue = (ts) => {
+                if (!ts) return null;
+                if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+                return new Date(ts).getTime();
+            };
+            return {
+                id: doc.id,
+                title: data.title || '',
+                status: data.status || 'todo',
+                dueDate: getTimestampValue(data.dueDate),
+                createdAt: getTimestampValue(data.createdAt),
+                updatedAt: getTimestampValue(data.updatedAt),
+                description: data.description || '',
+                priority: data.priority || 'medium',
+                pinned: data.pinned || false,
+                userId: data.userId || userId,
+                subtasks: data.subtasks || [],
+                order: data.order || 0,
+                isChecklist: data.isChecklist || false,
+                completed: data.completed || false
+            };
+        };
+
         if (currentUserId === 'skip-auth-user') {
             const localTasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             try {
-                const publicDocRef = doc(db, "public", "demoTasks");
-                const publicDoc = await getDoc(publicDocRef);
-                if (publicDoc.exists()) {
-                    const demoData = publicDoc.data().tasks || [];
-                    state.tasks = [...demoData, ...localTasks];
-                } else {
-                    state.tasks = localTasks;
-                }
+                // Hierarchical Path: public (Col) -> demoTasks (Doc) -> demoTasks (Sub-Col)
+                // This fits the user's "public/demotasks" request while following Firestore rules.
+                const publicSnap = await getDocs(collection(db, "public", "demoTasks", "demoTasks"));
+                const publicTasks = publicSnap.docs.map(d => parseTaskDoc(d, 'anonymous-visitor'));
+                state.tasks = [...publicTasks, ...localTasks];
             } catch (e) {
+                console.warn('Failed to load demoTasks at public/demoTasks/demoTasks', e);
+                state.tasks = localTasks;
+            }
+        } else {
+            const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
+            state.tasks = querySnapshot.docs.map(d => parseTaskDoc(d, currentUserId));
+        }
+
+        renderBoard();
+    } catch (e) {
+                console.warn('Failed to load root demoTasks collection', e);
+                state.tasks = localTasks;
+            }
+        } else {
+            const querySnapshot = await getDocs(collection(db, "users", currentUserId, "tasks"));
+            state.tasks = querySnapshot.docs.map(d => parseTaskDoc(d, currentUserId));
+        }
+
+        renderBoard();
+    } catch (e) {
                 console.warn('Failed to load public demo tasks', e);
                 state.tasks = localTasks;
             }

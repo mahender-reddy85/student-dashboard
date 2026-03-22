@@ -27,14 +27,14 @@ service cloud.firestore {
       return data.createdAt == resource.data.createdAt;
     }
 
-    // Public Demo Data - READ ONLY
-    // Skip users can see this, but no one can modify it via the app
-    match /public/demoTasks {
+    // Shared Demo Data in Nested Structure
+    // Root Collection: public -> Document: demoTasks -> Sub-Collection: demoTasks
+    match /public/demoTasks/demoTasks/{taskId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // Auth Tasks
+    // Auth Tasks (Private)
     match /users/{uid}/tasks/{taskId} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid 
