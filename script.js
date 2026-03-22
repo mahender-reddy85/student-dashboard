@@ -297,10 +297,10 @@ async function loadTasksFromDatabase() {
             const localTasks = JSON.parse(localStorage.getItem('skip-auth-tasks') || '[]');
             try {
                 // Debug log for path verification
-                console.log("Reading public demo data from: public/demoTasks");
+                console.log("Reading public demo data from: public/demo/demoTasks");
                 
-                // Path requested by user
-                const publicSnap = await getDocs(collection(window.db, "public", "demoTasks"));
+                // Hierarchical Path: public (Col) -> demo (Doc) -> demoTasks (Sub-Col)
+                const publicSnap = await getDocs(collection(window.db, "public", "demo", "demoTasks"));
                 const publicTasks = publicSnap.docs.map(d => parseTaskDoc(d, 'anonymous-visitor'));
                 state.tasks = [...publicTasks, ...localTasks];
                 console.log(`Loaded ${publicTasks.length} demo tasks and ${localTasks.length} local tasks.`);

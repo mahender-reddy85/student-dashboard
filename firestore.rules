@@ -27,9 +27,9 @@ service cloud.firestore {
       return data.createdAt == resource.data.createdAt;
     }
 
-    // Shared Demo Data in Nested Structure
-    // Public -> demoTasks (Collection)
-    match /public/demoTasks/{taskId} {
+    // Shared Demo Data in Tiered Structure
+    // Public (Col) -> demo (Doc) -> demoTasks (Sub-Col)
+    match /public/demo/demoTasks/{taskId} {
       allow read: if true;
       allow write: if false;
     }
