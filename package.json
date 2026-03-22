@@ -6,8 +6,9 @@
     "scripts": {
         "deploy": "firebase deploy --only hosting"
     },
-    "dependencies": {},
-    "devDependencies": {},
+    "dependencies": {
+        "firebase": "^12.11.0"
+    },
     "engines": {
         "node": ">=14.0.0"
     }

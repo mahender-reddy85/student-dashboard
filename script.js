@@ -188,7 +188,7 @@ async function saveTaskToDatabase(title, status, dueDate, description = '', prio
         const newOrder = columnTasks.length;
 
         const tasksCol = currentUserId === 'skip-auth-user' 
-            ? collection(db, "public", "demoTasks", "tasks") 
+            ? collection(db, "public", "demo", "demoTasks") 
             : collection(db, "users", currentUserId, "tasks");
         const docRef = await addDoc(tasksCol, {
             title: title,
@@ -245,7 +245,7 @@ async function updateTaskInDatabase(taskId, taskData) {
         }
 
         const taskRef = currentUserId === 'skip-auth-user'
-            ? doc(db, "public", "demoTasks", "tasks", taskId)
+            ? doc(db, "public", "demo", "demoTasks", taskId)
             : doc(db, "users", currentUserId, "tasks", taskId);
 
         // First check if document exists
@@ -298,7 +298,7 @@ async function deleteTaskFromDatabase(taskId) {
         }
 
         const taskRef = currentUserId === 'skip-auth-user'
-            ? doc(db, "public", "demoTasks", "tasks", taskId)
+            ? doc(db, "public", "demo", "demoTasks", taskId)
             : doc(db, "users", currentUserId, "tasks", taskId);
         await deleteDoc(taskRef);
     }
@@ -330,7 +330,7 @@ async function loadTasksFromDatabase() {
         state.tasks = [];
 
         const tasksCol = currentUserId === 'skip-auth-user'
-            ? collection(db, "public", "demoTasks", "tasks")
+            ? collection(db, "public", "demo", "demoTasks")
             : collection(db, "users", currentUserId, "tasks");
         const querySnapshot = await getDocs(tasksCol);
 
@@ -1296,7 +1296,7 @@ function setupEventListeners() {
             try {
                 const batch = writeBatch(db);
                 const tasksCol = currentUserId === 'skip-auth-user'
-                ? collection(db, "public", "demoTasks", "tasks")
+                ? collection(db, "public", "demo", "demoTasks")
                 : collection(db, "users", currentUserId, "tasks");
             const querySnapshot = await getDocs(tasksCol);
 
@@ -1336,7 +1336,7 @@ function setupEventListeners() {
 
                     previousTasks.forEach((task) => {
                         const docRef = currentUserId === 'skip-auth-user'
-                            ? doc(db, "public", "demoTasks", "tasks", task.id)
+                            ? doc(db, "public", "demo", "demoTasks", task.id)
                             : doc(db, "users", currentUserId, "tasks", task.id);
 
                         batch.set(docRef, {
