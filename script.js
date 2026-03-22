@@ -665,9 +665,8 @@ function attachDragEvents() {
                 });
                 // Update in database
                 const updateData = {
-                    order: task.order,
-                    userId: currentUserId
-                }
+                    order: task.order
+                };
                 if (statusChanged) {
                     updateData.status = newStatus;
                 }
@@ -1267,8 +1266,7 @@ function toggleChecklistItem(taskId, isCompleted) {
         task.completed = isCompleted;
         // Update in database
         updateTaskInDatabase(taskId, {
-            completed: isCompleted,
-            userId: currentUserId
+            completed: isCompleted
         });
         // Update visual state
         const card = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -1417,7 +1415,7 @@ function setupInlineEditing(card, task) {
             titleText.textContent = newTitle || '/';
             // Update in database
             updateTaskInDatabase(task.id, {
-                title: newTitle, userId: currentUserId
+                title: newTitle
             });
             showToast('Task updated', 'success');
         }
@@ -1462,8 +1460,7 @@ function createSubtaskElement(subtask, index) {
                     task.subtasks[index].completed = e.target.checked;
                     // Update in database with new subtasks array
                     updateTaskInDatabase(taskId, {
-                        subtasks: task.subtasks,
-                        userId: currentUserId
+                        subtasks: task.subtasks
                     });
                     showToast(e.target.checked ? 'Subtask completed' : 'Subtask unchecked', 'success');
                 }
@@ -1479,8 +1476,7 @@ function createSubtaskElement(subtask, index) {
                     task.subtasks.splice(index, 1);
                     // Update in database with new subtasks array
                     updateTaskInDatabase(taskId, {
-                        subtasks: task.subtasks,
-                        userId: currentUserId
+                        subtasks: task.subtasks
                     });
                     // Re-render subtasks in modal
                     const subtasksContainer = document.getElementById('subtasksContainer');
@@ -1549,7 +1545,7 @@ function togglePin(id) {
         task.pinned = !task.pinned;
         // Update in database
         updateTaskInDatabase(id, {
-            pinned: task.pinned, userId: currentUserId
+            pinned: task.pinned
         });
         renderBoard();
         showToast(task.pinned ? 'Task pinned' : 'Task unpinned', 'success');
