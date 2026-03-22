@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isValidTask(data) {
-      return data.keys().hasOnly(['title', 'status', 'priority', 'order', 'createdAt', 'updatedAt', 'completed', 'pinned', 'subtasks', 'isChecklist', 'userId', 'description', 'dueDate'])
+      return data.keys().hasOnly(['id', 'title', 'status', 'priority', 'order', 'createdAt', 'updatedAt', 'completed', 'pinned', 'subtasks', 'isChecklist', 'userId', 'description', 'dueDate', 'deletedAt'])
         && data.title is string
         && (data.description == null || data.description is string)
         && data.status is string

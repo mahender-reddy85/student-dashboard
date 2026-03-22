@@ -219,7 +219,22 @@ async function updateTaskInDatabase(taskId, taskData) {
                 subtasks: updateData.subtasks || []
             });
         } else {
-            await updateDoc(taskRef, { ...updateData, updatedAt: serverTimestamp() });
+            // Prepare clean data for Firestore
+            const cleanUpdateData = { ...updateData };
+            
+            // Remove 'id' if present (it's the document reference, not a field)
+            delete cleanUpdateData.id;
+            
+            // Convert any primitive timestamp numbers back to Firestore Timestamps 
+            // for security rule compatibility (rules expect timestamp type)
+            if (cleanUpdateData.createdAt && typeof cleanUpdateData.createdAt === 'number') {
+                cleanUpdateData.createdAt = Timestamp.fromMillis(cleanUpdateData.createdAt);
+            }
+            if (cleanUpdateData.dueDate && typeof cleanUpdateData.dueDate === 'number') {
+                cleanUpdateData.dueDate = Timestamp.fromMillis(cleanUpdateData.dueDate);
+            }
+
+            await updateDoc(taskRef, { ...cleanUpdateData, updatedAt: serverTimestamp() });
         }
     } catch (error) {
         console.error("Database update error:", error);
